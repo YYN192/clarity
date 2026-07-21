@@ -1,6 +1,6 @@
 # Clarity — Session Handoff
 
-**Last updated:** 2026-07-21 · **Commit:** `f4186a0` · **Remote:** `github.com/YYN192/clarity` (in sync)
+**Last updated:** 2026-07-21 · **Commit:** `67f4299` · **Remote:** `github.com/YYN192/clarity` (in sync)
 **Health:** `flutter analyze` → *No issues found*. App builds and runs on the Android emulator.
 
 Read this first, then `AGENTS.md` (graph tooling) and `CLAUDE_MEMORY.md` (deep architecture).
@@ -16,10 +16,10 @@ Read this first, then `AGENTS.md` (graph tooling) and `CLAUDE_MEMORY.md` (deep a
 | Auth: email/password, Google, anonymous | ✅ Wired; Google verified end-to-end on Android |
 | FCM push (client side) | ✅ Token generated, stored in Firestore, verified |
 | Firestore | ✅ DB created, rules published for `fcm_tokens` |
-| Alert backend (GitHub Actions) | ✅ **Delivery proven end-to-end** — forced alert reached the emulator tray (run `29829775305`) |
+| Alert backend (GitHub Actions) | ✅ **Delivery proven end-to-end** — forced alert reached **both** the emulator and a real phone (`sent 2`, both trays confirmed) |
 | Alert secrets | ✅ `FIREBASE_SERVICE_ACCOUNT` + `OPENWEATHER_API_KEY` set; verified via `gh secret list` |
 | iOS push | ❌ **Impossible** — user has no Apple Developer account |
-| Tests | ❌ None written |
+| Tests | ⚠️ 10 passing (`clay_weather_icon_test.dart`) — `flutter test` is **green**. Everything else untested. |
 
 ---
 
@@ -67,14 +67,15 @@ adding the secrets — the dispatcher had never completed a single run.
 ### 🟠 P1 — Correctness/safety issues that will bite
 | # | Task | Why it matters |
 |---|---|---|
-| 1.1 | **Night icons render as a sun** | `WeatherIconMapper` emits `'Clear Night'`/`'Partly Cloudy Night'`; `ClayWeatherIcon` has no cases → falls through to sunny. Visible daily bug. |
-| 1.2 | **Bundle id `com.example.clarity`** | Google Play **rejects** `com.example.*`. Blocks release. Changing it requires re-running `flutterfire configure`. |
-| 1.3 | **No tests at all** | `detect-changes` already flags: AppColors, _MainScreenState, MenuScreen, SettingsPage, WeatherPage untested (risk 0.35). |
+| ~~1.1~~ | ~~Night icons render as a sun~~ | ✅ done `67f4299`. It was **three** missing cases, not two — `Fog` fell through too. Verified on device (Auckland at night → crescent moon; hourly row shows moon-behind-cloud). Locked by tests. |
+| 1.2 | **Bundle id `com.example.clarity`** | Google Play **rejects** `com.example.*`. Blocks release. Changing it requires re-running `flutterfire configure` **and re-registering every FCM token** — existing `fcm_tokens` docs become dead. |
+| 1.3 | **Barely any tests** | Was worse than "none": the repo shipped the untouched Flutter **counter template test**, so `flutter test` **failed**. Removed in `67f4299` and replaced with 10 passing tests for the icon mapping. Still untested: AppColors, _MainScreenState, MenuScreen, SettingsPage, WeatherPage, and `tools/weather-alerts` (risk 0.35). |
+| 1.4 | **`Snow` icon is `Colors.white` on a white card** | `ClayWeatherIcon` tints snow pure white; `ClayContainer` fills white and the chip is that same white at 10% alpha. The snowflake is very likely near-invisible. Not yet seen in situ — needs a snowy location to confirm. Pick a tinted blue-gray if so. |
 
 ### 🟡 P2 — Cleanup / consistency
 | # | Task |
 |---|---|
-| 2.1 | Remove unused deps: `http`, `translator`, `lottie` (imported nowhere). |
+| ~~2.1~~ | ~~Remove unused deps `http`, `translator`, `lottie`~~ — ✅ done `5717f71` (zero imports repo-wide; `dio` is the real client). **Do not remove `flutter_inset_shadow`** — it *is* used by `clay_weather_icon`'s sibling `clay_container.dart`. |
 | 2.2 | Settings toggle still uses bright `functionalBlue` — user rejected that blue on profile. Switch to `cloudShadow` slate. |
 | ~~2.3~~ | ~~Delete stale `MEMORY_INDEX.md`~~ — ✅ done `5717f71` (content was fully covered by `CLAUDE_MEMORY.md`). |
 

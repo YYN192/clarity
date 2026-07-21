@@ -77,16 +77,26 @@ Rules:
 
 ## Weather iconography — `ClayWeatherIcon`
 
-`clay_weather_icon.dart` maps a condition string (`'Clear Sky'`, `'Partly Cloudy'`,
-`'Cloudy'`, `'Rain'`, `'Storm'`, `'Snow'`) to a rounded Material icon + tinted circular
-clay chip. Pass `condition` + `size`. Add new conditions by extending its `switch`
-(and keep the tint from `AppColors`). Sizes in use: 140 (hero), 48/40/36 (list rows).
+`clay_weather_icon.dart` maps a condition string to a rounded Material icon + tinted
+circular clay chip. Pass `condition` + `size`. Sizes in use: 140 (hero), 48/40/36 (list rows).
 
-> Consistency gap to be aware of: `WeatherIconMapper.mapCodeToCondition`
-> (`core/utils/weather_icon_mapper.dart`) also emits **night** conditions like
-> `'Clear Night'` / `'Partly Cloudy Night'`, but `ClayWeatherIcon`'s switch has no cases
-> for them, so they hit the `default` (sunny). If you add night visuals, add matching
-> cases here so night states don't render as a sun.
+The nine conditions are the canonical list in `WeatherIconMapper.conditions`
+(`core/utils/weather_icon_mapper.dart`) — `'Clear Sky'`, `'Clear Night'`,
+`'Partly Cloudy'`, `'Partly Cloudy Night'`, `'Cloudy'`, `'Rain'`, `'Storm'`, `'Snow'`,
+`'Fog'`. Night states use the `cloudShadow` slate so they read as one family, and
+`nights_stay_rounded` (moon behind cloud) is the night twin of `cloud_queue_rounded`.
+
+**Adding a condition:** add it to `WeatherIconMapper.conditions` *and* to
+`ClayWeatherIcon.styleFor`. The mapping lives in that static (not inside `build`) so it
+is testable. A missing case falls through to `default` and silently renders a **sun** —
+that is exactly how night and fog shipped looking like a clear day (fixed `67f4299`).
+`test/features/weather/presentation/widgets/clay_weather_icon_test.dart` iterates the
+canonical list and fails if any condition falls through, so keep it passing rather than
+relying on review to catch it.
+
+> **Stick to rounded Material icons.** An external weather-icon font (e.g. the
+> `weather_icons` package) is a thin linear family and clashes with the chunky rounded
+> set the clay look depends on. Material already covers every condition.
 
 ## Typography — Bricolage Grotesque via `google_fonts`
 
