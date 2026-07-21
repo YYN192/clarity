@@ -22,31 +22,65 @@ Read this first, then `AGENTS.md` (graph tooling) and `CLAUDE_MEMORY.md` (deep a
 
 ---
 
-## 2. Pending work
+## 2. Pending work — RANKED
 
-### Blocked on the user (cannot be done by an agent)
-1. **Add two GitHub repo secrets** → Settings → Secrets and variables → Actions:
-   - `FIREBASE_SERVICE_ACCOUNT` — whole JSON from Firebase Console → Project settings → Service accounts → Generate new private key
-   - `OPENWEATHER_API_KEY` — same value as in `assets/.env`
+**The user's stated #1 priority: get real push notifications reaching phones in areas
+with extreme weather.** Everything in P0 serves that. Do not start P2+ until P0 is done.
 
-   Until these exist the scheduled workflow runs and fails. Test after adding via
-   Actions → *Severe weather alerts* → **Run workflow**.
+### 🔴 P0 — Make alerts actually fire (the current mission)
 
-### Ready to do (no blockers)
-2. **Remove unused dependencies**: `http`, `translator`, `lottie` are in `pubspec.yaml`
-   but imported nowhere. (`geocoding` was already removed — it broke the Android build.)
-3. **Bundle/application id is `com.example.clarity`** — Google Play rejects `com.example.*`.
-   Must change before any release. Changing it requires re-running `flutterfire configure`.
-4. **Stale doc**: `MEMORY_INDEX.md` (root) contradicts reality — claims a `clay_containers`
-   package and `AppColors.getSurface(isDarkMode)`, neither of which exist. Either delete it or
-   reconcile with `CLAUDE_MEMORY.md`, which is accurate.
-5. **Settings toggle is bright blue** (`AppColors.functionalBlue`) — the user explicitly
-   rejected that blue on the profile buttons. Consider switching to the muted slate
-   (`AppColors.cloudShadow`) for consistency.
-6. **Tablet/desktop master-detail** — `main_screen.dart` still uses a `PageView` at all widths.
-   `clarity-responsive` documents the side-by-side layout for wide screens.
-7. **Night weather icons** — `WeatherIconMapper` emits `'Clear Night'` / `'Partly Cloudy Night'`,
-   but `ClayWeatherIcon`'s switch has no cases for them, so night renders as a **sun**.
+| # | Task | Owner | Notes |
+|---|---|---|---|
+| 0.1 | **Add 2 GitHub repo secrets** | **USER** | Settings → Secrets and variables → Actions. `FIREBASE_SERVICE_ACCOUNT` (whole JSON: Firebase Console → Project settings → Service accounts → Generate new private key) and `OPENWEATHER_API_KEY` (same value as `assets/.env`). **Nothing can send until this exists.** |
+| 0.2 | **Prove delivery with a forced test** | agent | Actions → *Severe weather alerts* → Run workflow → tick **force_alert**. Bypasses real conditions + cooldown and pushes a test alert. Confirms the whole chain without waiting for a storm. |
+| 0.3 | **Verify a real classification** | agent | Run with **dry_run** ticked to see what *would* be sent for current conditions, without sending. |
+| 0.4 | **Confirm background delivery** | user+agent | Background the app first (system tray path), then force a test. Foreground shows an in-app SnackBar instead. |
+| 0.5 | **Register a second real device** | user | Only the emulator is registered. A real phone proves the multi-device grouping. |
+
+**Known weaknesses to address once it fires (still P0-adjacent):**
+- **Stale coordinates** — `updateLocation` only runs when weather loads (app opened). A phone
+  that hasn't opened the app in a week has week-old coordinates. Consider refreshing on
+  app resume, or storing a `locationUpdatedAt` and skipping devices that are too stale.
+- **Thresholds are untested against real severe weather.** `classify()` in
+  `tools/weather-alerts/index.mjs` is a first pass (condition ids + wind ≥17.2 m/s + temp
+  ≥40/≤-20). Tune once you see real firings.
+- **Current conditions ≠ forecast.** This alerts on weather happening *now*, not incoming.
+  Upgrading to One Call 3.0 `alerts` (real government warnings) is ~15 lines but needs a card.
+- **GitHub disables scheduled workflows after 60 days of repo inactivity.**
+
+### 🟠 P1 — Correctness/safety issues that will bite
+| # | Task | Why it matters |
+|---|---|---|
+| 1.1 | **Night icons render as a sun** | `WeatherIconMapper` emits `'Clear Night'`/`'Partly Cloudy Night'`; `ClayWeatherIcon` has no cases → falls through to sunny. Visible daily bug. |
+| 1.2 | **Bundle id `com.example.clarity`** | Google Play **rejects** `com.example.*`. Blocks release. Changing it requires re-running `flutterfire configure`. |
+| 1.3 | **No tests at all** | `detect-changes` already flags: AppColors, _MainScreenState, MenuScreen, SettingsPage, WeatherPage untested (risk 0.35). |
+
+### 🟡 P2 — Cleanup / consistency
+| # | Task |
+|---|---|
+| 2.1 | Remove unused deps: `http`, `translator`, `lottie` (imported nowhere). |
+| 2.2 | Settings toggle still uses bright `functionalBlue` — user rejected that blue on profile. Switch to `cloudShadow` slate. |
+| 2.3 | Delete/reconcile stale `MEMORY_INDEX.md` (contradicts `CLAUDE_MEMORY.md`). |
+
+### 🟢 P3 — Enhancements
+| # | Task |
+|---|---|
+| 3.1 | Tablet/desktop master-detail (`main_screen.dart` uses `PageView` at all widths; see `clarity-responsive`). |
+| 3.2 | Guest → real account linking (anonymous upgrade flow). |
+| 3.3 | Real Google logo asset on the login button (currently `Icons.g_mobiledata_rounded`). |
+| 3.4 | Saved-locations feature (the Stitch mockup showed it; app only stores one `last_selected_city`). |
+
+### ⚪ P4 — Won't do / blocked indefinitely
+- **iOS push** — needs a paid Apple Developer account. User doesn't have one. Don't propose APNs work.
+- **Cloud Functions backend** — needs Blaze + credit card. User chose GitHub Actions.
+
+### Testing the alert pipeline (added for exactly this purpose)
+```bash
+# locally, from tools/weather-alerts/ (needs the two env vars set):
+DRY_RUN=1     node index.mjs   # log what would be sent, send nothing
+FORCE_ALERT=1 node index.mjs   # push a test alert regardless of weather
+```
+Or from the Actions tab — *Run workflow* exposes both as checkboxes.
 
 ### Deliberately deferred (decided, don't relitigate)
 - **One Call 3.0 alerts** — the alert backend classifies severity from the *free* 2.5 API

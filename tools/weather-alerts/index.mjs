@@ -34,6 +34,12 @@ const COOLDOWN_MS = 6 * 60 * 60 * 1000;
 /** Decimal places used to group nearby devices (1 ≈ 11 km). */
 const GRID_PRECISION = 1;
 
+/** Log what would be sent, send nothing, write nothing. */
+const DRY_RUN = process.env.DRY_RUN === '1';
+/** Ignore real conditions + cooldown and push a test alert. Proves delivery
+ *  end-to-end when the weather is calm. */
+const FORCE_ALERT = process.env.FORCE_ALERT === '1';
+
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 /**
@@ -92,6 +98,7 @@ async function fetchWeather(lat, lon) {
 
 /** True when this device hasn't already had this alert recently. */
 function shouldSend(device, alert) {
+  if (FORCE_ALERT) return true; // test mode bypasses the cooldown
   if (device.lastAlertKey !== alert.key) return true;
   const lastMs = device.lastAlertAt?.toMillis?.() ?? 0;
   return Date.now() - lastMs > COOLDOWN_MS;
@@ -108,6 +115,10 @@ function buildBody(alert, device, weather) {
 }
 
 async function sendTo(device, alert, weather) {
+  if (DRY_RUN) {
+    console.log(`  [dry-run] would send "${alert.title}" → ${buildBody(alert, device, weather)}`);
+    return true;
+  }
   try {
     await messaging.send({
       token: device.token,

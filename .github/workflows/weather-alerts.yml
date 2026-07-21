@@ -8,6 +8,15 @@ on:
     - cron: '*/30 * * * *'
   # Lets you trigger a run by hand from the Actions tab (useful for testing).
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — log what would be sent, send nothing'
+        type: boolean
+        default: false
+      force_alert:
+        description: 'Force a test alert (ignores real conditions + cooldown)'
+        type: boolean
+        default: false
 
 jobs:
   dispatch:
@@ -28,4 +37,6 @@ jobs:
         env:
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          FORCE_ALERT: ${{ inputs.force_alert && '1' || '0' }}
         run: node index.mjs
