@@ -22,10 +22,27 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.971914231376-urosmrtul7htbimrbjh65sg8hic8nfcq</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Clarity needs access to your location to show the local weather forecast.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Clarity needs access to your location to provide weather updates.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Clarity needs access to your location to show the local weather forecast.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -47,12 +64,6 @@
 			</array>
 		</dict>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Clarity needs access to your location to show the local weather forecast.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Clarity needs access to your location to provide weather updates.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Clarity needs access to your location to show the local weather forecast.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -71,17 +82,6 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.971914231376-urosmrtul7htbimrbjh65sg8hic8nfcq</string>
-			</array>
-		</dict>
 	</array>
 </dict>
 </plist>
