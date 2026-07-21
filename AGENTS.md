@@ -69,18 +69,62 @@ The graph is built on **Tree-sitter** (parses Dart ASTs) and stored in SQLite at
 
 **Current stats:** 391 nodes, 1953 edges, 82 files, 10 communities.
 
-### Known Dart Limitations (v2.3.7)
+### Known Dart Limitations — VERIFIED 2026-07-21
 
-1. **CALLS edges** — v2.3.7 includes Dart call extraction. Verify by querying
-   `query_graph_tool(pattern="callers_of", target="<function_name>")`. If it
-   returns 0 for a function that IS called, fall back to Grep.
-2. **`package:` import resolution** — `importers_of` may not resolve
-   `package:clarity/...` imports to absolute paths. Relative imports (`../`)
-   work correctly. For package imports, use `query_graph_tool` with
-   `pattern="imports_of"` on the importing file instead.
-3. **`inheritors_of` bare vs qualified names** — Query with the bare class
-   name (e.g. `"WeatherBloc"`) not the qualified path. The tool has fallback
-   logic for this.
+> These were tested empirically against this exact graph. Two of the three
+> previously-documented claims here were **wrong**; this is the corrected version.
+
+1. **`callees_of` on a Dart class or method ALWAYS returns 0.**
+   Dart `CALLS` edges use the **file** as `source_qualified` — they never carry a
+   `::Class.method` suffix, so no class/function node is ever a CALLS *source*.
+   ❌ `callees_of("WeatherBloc")` → 0
+   ❌ `callees_of("WeatherBloc._fetchWeatherByCity")` → 0
+   ✅ `callees_of("lib/features/weather/presentation/bloc/weather_bloc.dart")` → 15 results
+   **Query the file path.** Do *not* fall back to Grep — the data is there.
+
+2. **Use QUALIFIED names for `callers_of` / `callees_of`, not bare names.**
+   (The previous version of this doc said the opposite.) A bare name matches the class
+   *and* all its methods via FTS and returns `status: "ambiguous"` with candidates.
+   ❌ `callers_of("WeatherBloc")` → ambiguous (5 candidates)
+   ✅ `callers_of("/abs/path/…/weather_bloc.dart::WeatherBloc")` → 1 result (injection_container.dart)
+   Get the qualified name from `semantic_search_nodes_tool` first.
+
+3. **Only ~24% of CALLS targets resolve to real nodes** (Dart: 27%). The rest are bare
+   names like `WeatherError`, `emit`, `fold`. Absence of an edge is *not* proof of no call.
+
+4. **`package:clarity/...` resolution is moot** — this codebase has **zero** such imports;
+   it uses relative imports exclusively. Relative imports resolve correctly to absolute
+   paths. External `package:flutter/...` stay as unresolved literal strings (expected).
+
+5. **Communities are directory-based, not feature-based.** There is ONE `lib/features`
+   community (182 nodes, misleadingly named `pages-weather`) containing auth + weather +
+   settings + navigation, and one `lib/core`. Do not expect per-feature clusters.
+
+6. **"0 cross-community edges" is an artifact, not evidence of decoupling.** All 82 `File`
+   nodes have `community_id = NULL`, and `IMPORTS_FROM` edges are File→File — so no edge
+   ever has two community-assigned endpoints. Coupling warnings cannot fire.
+
+7. **Hub nodes are pages, not the DI container**, because CALLS edges are file-sourced and
+   large UI files accumulate the most edges. `injection_container.dart` ranks ~9th.
+
+### If the MCP tools aren't loaded
+
+They only initialise when a session starts *after* `.mcp.json` exists. If they're missing,
+**don't fall back to Grep** — the CLI has an exact equivalent for every tool and reads the
+same `graph.db`:
+
+```bash
+code-review-graph search "WeatherBloc" --kind Class     # semantic_search_nodes_tool
+code-review-graph query callers_of "<qualified_name>"   # query_graph_tool
+code-review-graph impact --files <path>                 # get_impact_radius_tool
+code-review-graph communities / architecture            # list_communities / overview
+code-review-graph detect-changes                        # detect_changes_tool
+code-review-graph dead-code / large-functions
+```
+
+Note the generated skills in `.claude/skills/` reference a few tool names that may not
+exist (`get_minimal_context`, `list_graph_stats`, `list_flows`). If a call errors with an
+unknown tool, use the equivalent from the table above rather than retrying.
 
 ---
 
