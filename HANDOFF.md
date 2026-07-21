@@ -40,7 +40,7 @@ adding the secrets — the dispatcher had never completed a single run.
 | 0.2 | Prove delivery with a forced test | ✅ Run `29829775305` → `sent 1`; notification confirmed in the emulator tray via `dumpsys notification` |
 | 0.3 | Verify a real classification | ✅ `dry_run` on `main` → `1 device … Los Altos: clear … sent 0` |
 | 0.4 | Confirm background delivery | ✅ App backgrounded with `KEYCODE_HOME` (process alive), alert arrived as an OS tray notification, not a SnackBar |
-| 0.5 | **Register a second real device** | ⬜ **STILL OPEN** — only the emulator is registered; multi-device grouping remains unproven |
+| 0.5 | Register a second real device | ✅ Xiaomi 17 (`7584896f`, HyperOS) registered. `2 device(s) across 2 location(s)` → Sofia + Mountain View, `sent 2`, both trays confirmed |
 
 **Two bugs fixed to get here** (both silent — the workflow exited 0 while sending nothing):
 
@@ -171,6 +171,34 @@ adb shell dumpsys notification --noredact | grep -A30 "pkg=com.example.clarity" 
 - **`gh workflow run --ref <branch>`** dispatches on any branch, but the `*/30` **schedule only
   runs on the default branch** — a fix sitting on a feature branch does nothing for real alerts.
 
+### Real device: Xiaomi 17 / HyperOS (`7584896f`, model `25113PN0EG`, codename `pudding`)
+HyperOS blocks three things the emulator allows. All three fail *loudly*, so read the error:
+- **`adb install` → `INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`.** You did not
+  cancel anything. Enable **Developer options → Install via USB** (needs a Mi account and
+  network; region-restricted on some SIMs). Separate permission from USB debugging.
+- **`pm grant` → `SecurityException: … GRANT_RUNTIME_PERMISSIONS`.** The emulator trick below
+  does **not** work here. Runtime permissions must be granted by the user on the device.
+  `POST_NOTIFICATIONS` is the one that matters — without it FCM accepts the push and the
+  phone silently drops it.
+- **`input keyevent` → `SecurityException: … INJECT_EVENTS`.** Needs Xiaomi's separate
+  *USB debugging (Security settings)* toggle. To background the app without it, use an intent:
+  `adb -s <id> shell am start -a android.intent.action.MAIN -c android.intent.category.HOME`
+  — that is not input injection and works fine.
+- Grant location + notifications through the app's own prompts; `ACCESS_FINE_LOCATION` is
+  granted at install but `POST_NOTIFICATIONS` is not.
+- **Open the weather page once after signing in.** `updateLocation` only writes coordinates
+  when weather loads; a device with no `lat`/`lon` is filtered out of the dispatcher query
+  entirely and will never receive an alert.
+
+### Diagnosing "phone not showing up"
+- **`system_profiler SPUSBDataType` can return an empty list even with the phone plugged in**
+  (sandbox/permission dependent) — it fails *silently*, not with an error. Cross-check with
+  `ioreg -p IOUSB -w0`, which showed the device connected the whole time. Do not send anyone
+  hunting for a new cable on `system_profiler` evidence alone.
+- `adb devices` states: `unauthorized` = RSA prompt not accepted on the phone; `offline` =
+  usually USB mode; missing entirely = USB mode is "Charging only" (set **File Transfer**).
+- Android Studio reads the same adb daemon — if `adb devices` sees it, Studio will too.
+
 ### Android / emulator
 - `adb`, `emulator`, `flutter` are **not on the user's fish PATH**. Use full paths:
   `~/Library/Android/sdk/platform-tools/adb`, or run
@@ -179,7 +207,8 @@ adb shell dumpsys notification --noredact | grep -A30 "pkg=com.example.clarity" 
   `adb devices` first — Android Studio runs it headless (`-qt-hide-window`) and mirrors it.
 - `adb shell am force-stop <pkg>` also **terminates `flutter run`** (it exits 0).
 - Grant permissions without dialogs: `adb shell pm grant com.example.clarity android.permission.ACCESS_FINE_LOCATION`
-  (also `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`).
+  (also `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`). **Emulator only** — HyperOS rejects
+  this with a `SecurityException`; see the Xiaomi section above.
 - Set a GPS fix: `adb emu geo fix -122.084 37.422`.
 - `E/GoogleApiManager: SecurityException: Unknown calling package name 'com.google.android.gms'`
   is **benign emulator noise**, not an app bug.
