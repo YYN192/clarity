@@ -88,7 +88,7 @@ class WeatherPage extends StatelessWidget {
       return SizedBox(
         key: const ValueKey('initial'),
         height: placeholderHeight,
-        child: const Center(child: Text('Search for a city')),
+        child: Center(child: Text(Localizer.localize('search_for_a_city', language))),
       );
     }
   }

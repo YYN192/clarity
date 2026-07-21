@@ -19,5 +19,7 @@ class AppColors {
   static const Color shadowLight = Color(0x73FFFFFF);
   static Color shadowDark = const Color(0xFFD1CDC7).withValues(alpha: 0.5);
   
+  static const Color selectedItem = Color(0xFFE8E2D8);
+
   static Color getCardColor() => Colors.white;
 }

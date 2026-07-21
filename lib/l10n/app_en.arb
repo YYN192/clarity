@@ -207,5 +207,11 @@
   "guest_session": "Guest session",
   "@guest_session": { "description": "Email value shown for anonymous users" },
   "retry": "Retry",
-  "@retry": { "description": "Button to retry loading the weather after an error" }
+  "@retry": { "description": "Button to retry loading the weather after an error" },
+  "app_name": "Clarity",
+  "@app_name": { "description": "App brand name shown in the title bar and menu" },
+  "app_version": "v2.4.0 • Studio Clarity",
+  "@app_version": { "description": "Version string shown at the bottom of the menu" },
+  "search_for_a_city": "Search for a city",
+  "@search_for_a_city": { "description": "Placeholder shown when no city is selected yet" }
 }

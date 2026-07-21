@@ -71,7 +71,7 @@ class _MainScreenState extends State<MainScreen> {
                 );
               },
             ),
-            title: const Text('Clarity', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            title: Text(Localizer.localize('app_name', settingsState.settings.language), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             actions: [
               IconButton(
                 icon: const Icon(Icons.search, color: AppColors.textPrimary),

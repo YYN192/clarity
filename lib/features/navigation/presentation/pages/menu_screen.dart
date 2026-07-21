@@ -25,8 +25,8 @@ class MenuScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Clarity',
-                          style: TextStyle(
+                      Text(Localizer.localize('app_name', state.settings.language),
+                          style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold)),
                       GestureDetector(
@@ -85,9 +85,9 @@ class MenuScreen extends StatelessWidget {
                   const Spacer(),
                   
                   const SizedBox(height: 32),
-                  const Center(
-                    child: Text('v2.4.0 • Studio Clarity',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  Center(
+                    child: Text(Localizer.localize('app_version', state.settings.language),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                   ),
                 ],
               ),
@@ -106,7 +106,7 @@ class MenuScreen extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: ClayContainer(
-        color: isSelected ? const Color(0xFFE8E2D8) : Colors.transparent,
+        color: isSelected ? AppColors.selectedItem : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Row(
           children: [
