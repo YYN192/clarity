@@ -11,7 +11,12 @@
  *
  * Secrets (env): OPENWEATHER_API_KEY, FIREBASE_SERVICE_ACCOUNT (service-account JSON).
  */
-import admin from 'firebase-admin';
+// firebase-admin v13+ dropped the `admin.*` namespace API in ESM: the default
+// export carries no `.credential` / `.firestore` / `.messaging`. Use the
+// modular sub-path entry points instead.
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const FIREBASE_SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -21,12 +26,12 @@ if (!OPENWEATHER_API_KEY || !FIREBASE_SERVICE_ACCOUNT) {
   process.exit(1);
 }
 
-admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT)),
+initializeApp({
+  credential: cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT)),
 });
 
-const db = admin.firestore();
-const messaging = admin.messaging();
+const db = getFirestore();
+const messaging = getMessaging();
 
 const COLLECTION = 'fcm_tokens';
 /** Don't repeat the same kind of alert to a device within this window. */
@@ -128,7 +133,7 @@ async function sendTo(device, alert, weather) {
     });
     await db.collection(COLLECTION).doc(device.id).update({
       lastAlertKey: alert.key,
-      lastAlertAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastAlertAt: FieldValue.serverTimestamp(),
     });
     return true;
   } catch (err) {
