@@ -1,0 +1,503 @@
+# Clarity Weather App — Complete Project Memory
+
+## Project Overview
+
+**Clarity** is a feature-first Clean Architecture Flutter weather app using:
+- **OpenWeatherMap API** for weather data
+- **Firebase Auth** (Email/Password + Google Sign-In) for authentication
+- **Neumorphic "Tactile Neumorphic" (claymorphism)** design system — light mode only
+- **29-language runtime localization** via ARB files + Crowdin
+- **flutter_bloc** for state management
+- **GetIt** for DI
+- **go_router** for navigation
+- **Dio** for HTTP
+
+**Platforms**: iOS, Android, Web, macOS, Windows, Linux (all six built)
+
+---
+
+## Architecture — Feature-First Clean (Reso Coder Style)
+
+```
+lib/
+├── main.dart                          # App bootstrap (DI → Localizer → runApp)
+├── core/                              # Cross-cutting infrastructure
+│   ├── config/env_config.dart         # .env → EnvConfig (API keys)
+│   ├── di/injection_container.dart    # GetIt composition root (sl)
+│   ├── error/
+│   │   ├── exceptions.dart            # Data-layer throwables (ApiKey/NotFound/RateLimit/Network/Server)
+│   │   └── failures.dart              # Domain Failures (Equatable) returned in Either.Left
+│   ├── router/app_router.dart         # GoRouter: single '/' route → MainScreen + WeatherBloc
+│   ├── services/location_service.dart # GPS via geolocator (interface + impl)
+│   ├── theme/
+│   │   ├── app_colors.dart            # Static palette — NO raw Color(0x…) in widgets
+│   │   └── app_theme.dart             # ThemeData (Bricolage Grotesque, light only)
+│   ├── usecases/usecase.dart          # abstract UseCase<Type,Params> + NoParams
+│   └── utils/
+│       ├── localizer.dart             # Runtime ARB loader (29 langs)
+│       └── weather_icon_mapper.dart   # OpenWeather code → condition string
+└── features/
+    ├── navigation/presentation/pages/ # App shell: MainScreen (PageView + bottom nav) + MenuScreen
+    ├── settings/                      # Settings feature (domain + presentation ONLY; no data layer)
+    │   ├── domain/entities/app_settings.dart  # 3 unit enums + language + alerts + isDarkMode (locked false)
+    │   └── presentation/
+    │       ├── bloc/settings_bloc.dart        # part event/state; SharedPreferences direct
+    │       ├── bloc/settings_event.dart
+    │       ├── bloc/settings_state.dart
+    │       └── pages/settings_page.dart       # Sliding pills, dropdown, toggle
+    ├── weather/                       # Flagship feature — FULL clean stack
+    │   ├── domain/
+    │   │   ├── entities/weather.dart          # Weather + HourlyForecast + DailyForecast (Equatable)
+    │   │   ├── repositories/weather_repository.dart  # Abstract interface
+    │   │   └── usecases/get_weather.dart      # GetWeather + WeatherParams
+    │   ├── data/
+    │   │   ├── models/weather_model.dart      # DTO extends Weather; fromApiResponse()
+    │   │   ├── datasources/weather_remote_data_source.dart  # Dio → OpenWeather (geo→current→forecast)
+    │   │   └── repositories/weather_repository_impl.dart    # try/catch → Either<Failure,Weather>
+    │   └── presentation/
+    │       ├── bloc/weather_bloc.dart / weather_event.dart / weather_state.dart
+    │       ├── pages/weather_page.dart      # "Today" tab (hero temp, hourly strip, daily list)
+    │       ├── pages/forecast_page.dart     # "Forecast" tab (metric grid + daily)
+    │       └── widgets/
+    │           ├── clay_container.dart      # THE neumorphic surface
+    │           └── clay_weather_icon.dart   # Condition → icon + tinted clay chip
+    └── auth/                         # Firebase Auth feature
+        ├── domain/
+        │   ├── entities/auth_user.dart
+        │   └── repositories/auth_repository.dart
+        ├── data/
+        │   ├── models/auth_user_model.dart
+        │   ├── datasources/firebase_auth_data_source.dart
+        │   └── repositories/auth_repository_impl.dart
+        └── presentation/
+            ├── bloc/auth_bloc.dart / auth_event.dart / auth_state.dart
+            └── pages/{login_page, profile_page, auth_gate.dart}
+```
+
+### Layer Boundaries (ENFORCED)
+
+| Layer | Folder | Contains | May Import | MUST NOT Import |
+|-------|--------|----------|------------|-----------------|
+| **domain** | `domain/{entities,usecases,repositories}` | Entities, UseCases, Repo **interfaces** | `dartz`, `equatable`, `core/error` | `flutter`, `bloc`, `dio`, models/DTOs |
+| **data** | `data/{models,datasources,repositories}` | DTOs (extend entities), Dio datasources, Repo **impls** | domain, `dio`, `core/error`, `core/config` | `flutter` widgets, `bloc` |
+| **presentation** | `presentation/{bloc,pages,widgets}` | BLoCs, pages, widgets | domain, `flutter`, `flutter_bloc` | `data/datasources`, models directly |
+
+**Rules:**
+- UI talks to BLoC ONLY (events / BlocBuilder / BlocListener)
+- BLoC depends on **UseCase**, not repository (Settings is the deliberate exception — reads SharedPreferences directly)
+- Domain = pure Dart (no Flutter, no dio, no models)
+- Only **entities** cross out of data layer (DTO extends entity → returned as entity)
+
+### Error Handling — `Either<Failure, T>` everywhere
+
+1. **Datasource** throws typed `Exception` (`core/error/exceptions.dart`)
+2. **RepositoryImpl** wraps in `try/catch`, maps each exception → `Failure` (`core/error/failures.dart`), returns `Either<Failure, T>`
+3. **UseCase** returns the `Either` through (adds domain validation if needed)
+4. **BLoC** resolves with `.fold((f)=>emit(Error(f.message)), (d)=>emit(Loaded(d)))`
+
+Never throw across layers.
+
+---
+
+## Dependency Injection — `injection_container.dart` is the ONLY wiring point
+
+```dart
+final sl = GetIt.instance;
+
+// BLoCs → registerFactory (fresh per use)
+sl.registerFactory(() => WeatherBloc(getWeather: sl(), locationService: sl(), sharedPreferences: sl()));
+sl.registerFactory(() => SettingsBloc(sharedPreferences: sl()));
+sl.registerFactory(() => AuthBloc(sl()));
+
+// UseCases, Repos, DataSources, Services → registerLazySingleton
+sl.registerLazySingleton(() => GetWeather(sl()));
+sl.registerLazySingleton<WeatherRepository>(() => WeatherRepositoryImpl(remoteDataSource: sl()));
+sl.registerLazySingleton<WeatherRemoteDataSource>(() => WeatherRemoteDataSourceImpl(dio: sl(), envConfig: sl()));
+sl.registerLazySingleton<LocationService>(() => LocationServiceImpl());
+
+// External singletons (awaited)
+final sp = await SharedPreferences.getInstance();
+sl.registerLazySingleton(() => sp);
+sl.registerLazySingleton(() => Dio());
+sl.registerLazySingleton<FirebaseAuth>(() => FirebaseAuth.instance);
+sl.registerLazySingleton<GoogleSignIn>(() => GoogleSignIn.instance);
+```
+
+Sections separated by `//! Features - X`, `//! Core`, `//! External` comments.
+
+---
+
+## Design System — "Tactile Neumorphic" (Light Mode Only)
+
+### Colors — `AppColors` ONLY (no raw hex in widgets)
+
+| Token | Hex | Use |
+|-------|-----|-----|
+| `surface` | `#FBF9F4` | Scaffold bg, inset chips |
+| `textPrimary` | `#2D3142` | Headings, values |
+| `textSecondary` | `#9BA8BB` | Labels, captions |
+| `functionalBlue` | `#4A90E2` | Primary accent, focus |
+| `warmAccent` | `#F5E6CC` | Selected pill fill |
+| `atmosphericBlueGray` | `#7D8BA1` | Icon tint |
+| `shadowLight` | `white` | Top-left highlight |
+| `shadowDark` | `#D1CDC7 @ 50%` | Bottom-right depth |
+| `getCardColor()` → `white` | | Default ClayContainer fill |
+
+### The Surface — `ClayContainer` (single source of truth)
+
+```dart
+ClayContainer(
+  borderRadius: 24,                    // cards 24, pills 20-40, chips 12-16
+  padding: EdgeInsets.all(20),
+  color: AppColors.getCardColor(),     // optional; defaults to white
+  shape: BoxShape.rectangle,           // or .circle for icon buttons
+  child: ...,
+)
+```
+
+**Rules:**
+- Wrap **every** distinct content block in `ClayContainer`
+- Separation is by **elevation**, not borders/dividers
+- Nesting is intentional: inset `ClayContainer(color: AppColors.surface)` makes "embossed" chips inside raised cards
+- Shadows must not be clipped → give scroll views generous padding
+
+### Weather Icons — `ClayWeatherIcon`
+
+Maps condition string (`'Clear Sky'`, `'Partly Cloudy'`, `'Rain'`, `'Storm'`, `'Snow'`) → rounded Material icon inside tinted circular clay chip.
+- Sizes in use: 140 (hero), 48/40/36 (list rows)
+- **Gap**: `WeatherIconMapper` emits night conditions (`'Clear Night'`, `'Partly Cloudy Night'`) but `ClayWeatherIcon` switch has no cases → falls back to sunny. Add cases if you add night visuals.
+
+### Typography — Bricolage Grotesque via `google_fonts`
+
+Set globally in `AppTheme.lightTheme` → `GoogleFonts.bricolageGrotesqueTextTheme()`.
+- Hero temp: 84–96 bold (`FittedBox`)
+- Page titles: 32 bold
+- Section headers: 24 bold
+- Row titles: 18–20 bold
+- Body/labels: 14–18, `textSecondary` for secondary
+- Overlines: `letterSpacing: 1.2` (settings "PREFERENCES")
+
+**36 hardcoded `fontSize:` literals exist** — when adding text, follow the ladder above and wrap overflow-prone content in `FittedBox(fit: BoxFit.scaleDown)` + `maxLines`/`overflow: ellipsis`.
+
+### Motion — First-Class, Reuse These Patterns
+
+| Pattern | Implementation | Where Used |
+|---------|----------------|------------|
+| State cross-fade | `AnimatedSwitcher(duration: 600ms, child: …, key: ValueKey(state))` | `weather_page`, `forecast_page` |
+| Tab switch | `PageView` + `PageController.animateToPage(400ms, easeInOutCubic)` | `main_screen` |
+| Sliding selector pill | `Stack` → `AnimatedPositioned(350ms, easeInOutCubic)` sized to `width/count` over `Row` of `Expanded` taps | `main_screen` bottom nav, `settings_page` toggles |
+| Tap press | `AnimatedScale(scale: 0.95, 100ms)` on `onTapDown/Up/Cancel` | `_HourlyForecastItem` |
+| Route transition | `PageRouteBuilder` + `SlideTransition(Offset(-1,0)→0, easeInOutCubic)` | `main_screen` → `menu_screen` |
+| List edge fade | `ShaderMask` + `LinearGradient(stops: [0,.05,.95,1], BlendMode.dstIn)` | `_HourlyForecastStrip` horizontal scroll |
+
+**Do not invent new transition styles.** Copy the pattern above.
+
+### Localization — Part of Design Consistency
+
+**Every** user-facing string: `Localizer.localize('key', settings.language)`.
+- Keys in `lib/l10n/app_en.arb` (source of truth)
+- 28 translations auto-synced via Crowdin (`crowdin push` / `crowdin pull`)
+- Missing key → English fallback → raw key (never crashes)
+
+---
+
+## Responsive System — Breakpoints in `core/responsive/breakpoints.dart`
+
+```dart
+enum ScreenType { phone, tablet, desktop }
+
+class Breakpoints {
+  static const double tablet = 600;
+  static const double desktop = 1024;
+  static const double maxContentWidth = 720;  // cap single-column content
+}
+
+ScreenType screenTypeOf(double width) => width >= 1024 ? ScreenType.desktop
+    : width >= 600 ? ScreenType.tablet : ScreenType.phone;
+```
+
+**Rules:**
+- Branch on **width**, never `Platform.isX` (desktop window can be phone-narrow)
+- `LayoutBuilder` for widget-local space; `MediaQuery.sizeOf(context)` for screen-level decisions
+- **Kill fixed `height: 600`** — size to available space (`LayoutBuilder` → `constraints.maxHeight`)
+- **Cap content width** on large screens:
+  ```dart
+  Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: 720), child: yourScrollView))
+  ```
+  Applied at page level in `weather_page`, `forecast_page`, `settings_page`, `menu_screen`.
+- **Grid columns** via `gridColumnsFor(width)` helper (2/3/4)
+- **Master-detail on wide screens**: replace `PageView` with side-by-side `Row(Expanded(flex:2) + Expanded(flex:3))`, hide bottom nav
+
+**Responsive Debt (fix as you touch files):**
+- 36 hardcoded `fontSize:` literals
+- Fixed shadow offsets (8/16) — consider `elevationScale` param in `ClayContainer` later
+- Magic `600` in `forecast_page.dart:174` → use `Breakpoints.tablet`
+
+---
+
+## Navigation & Shell
+
+- **App entry**: `AppRouter.router` → `/` provides `WeatherBloc` → `MainScreen`
+- **MainScreen**: `PageView` (WeatherPage | ForecastPage) + sliding bottom nav (clay pill) + app bar (menu + search)
+- **MenuScreen**: Slide-from-left route (`PageRouteBuilder`), shows Home/Settings/Profile, passes `SettingsBloc` via `BlocProvider.value`
+- **Cross-BLoC reaction**: `MainScreen` has `BlocListener<SettingsBloc>` with `listenWhen` on unit/language change → triggers `WeatherBloc` reload
+
+---
+
+## Key Data Flow (memorize)
+
+```
+UI Event (tap search, GPS, settings change)
+    ↓
+WeatherBloc.add(LoadInitialWeather / GetWeatherEvent)
+    ↓
+_onLoadInitialWeather:
+  1. Check SharedPreferences 'last_selected_city'
+  2. Else GPS via LocationService
+  3. Else fallback 'Brooklyn'
+    ↓
+GetWeather(WeatherParams(cityName/lat/lon, units, locale))
+    ↓
+WeatherRepositoryImpl.getWeatherByCity/Coords
+    ↓
+WeatherRemoteDataSourceImpl (Dio):
+  1. Geocode city → lat/lon (if city)
+  2. Current weather call
+  3. 5-day/3-hour forecast call
+  4. WeatherModel.fromApiResponse(geo, current, forecast)
+    ↓
+Repository returns Right(WeatherModel as Weather)
+    ↓
+BLoC .fold → emit(WeatherLoaded) / emit(WeatherError)
+    ↓
+UI rebuilds via BlocBuilder + AnimatedSwitcher
+```
+
+---
+
+## Adding a New Feature — Follow `clarity-add-feature` Skill Exactly
+
+**Full feature (new API/data) = `weather` template:**
+
+1. `lib/features/<feature>/domain/entities/<name>.dart` — Equatable entity
+2. `domain/repositories/<feature>_repository.dart` — abstract interface returning `Either<Failure, Entity>`
+3. `domain/usecases/<verb>.dart` — `UseCase<Entity, Params>` calling repo
+4. `data/models/<name>_model.dart` — DTO extends entity, `fromJson`/`fromApiResponse`
+5. `data/datasources/<feature>_remote_data_source.dart` — interface + Dio impl, throws typed exceptions
+6. `data/repositories/<feature>_repository_impl.dart` — try/catch → Either mapping
+7. **Register in `injection_container.dart`** under new `//! Features - <Feature>` section
+8. `presentation/bloc/` — Bloc<Event,State>, Equatable events/states, `on<Event>` handlers
+9. `presentation/pages/`, `presentation/widgets/` — ClayContainer, AppColors, Localizer, responsive
+10. Wire navigation: `GoRoute` in `app_router.dart` OR `PageRouteBuilder` + `BlocProvider.value` (see `menu_screen.dart`)
+
+**New page in existing feature** (no new data): Add page under `presentation/pages/`, reuse feature's BLoC via `context.read`/`BlocBuilder`. Add to `PageView` children in `main_screen.dart` + nav item.
+
+**New setting:**
+1. Add field + enum to `AppSettings` (fields, ctor default, `copyWith`, `props`)
+2. Persist in `SettingsBloc._loadSettings` / `_onUpdateSettings` (new `'setting_<x>'` key)
+3. UI control in `settings_page.dart` using `_buildSettingSection` + `_buildAnimatedToggle`/`Switch`/`DropdownButton` → dispatch `UpdateSettings(settings.copyWith(<x>: val))`
+4. If affects weather (unit/language), extend `BlocListener.listenWhen` in `main_screen.dart`
+
+**New user-facing string (REQUIRED for any visible text):**
+1. Add key + value to `lib/l10n/app_en.arb` (with `@key` metadata)
+2. Use `Localizer.localize('key', settings.language)`
+3. `crowdin push` / `crowdin pull` for translations
+4. New language → add to `Localizer._languageMap` + ship `lib/l10n/app_<code>.arb`
+
+---
+
+## Pre-Flight Checklist (before considering any task done)
+
+- [ ] Domain has **no** Flutter/dio/model imports
+- [ ] Repo returns `Either<Failure,T>`; no throws escape data layer
+- [ ] Everything registered in `injection_container.dart` (Factory for BLoC, LazySingleton otherwise)
+- [ ] BLoC depends on UseCase; UI depends on BLoC only
+- [ ] All strings via `Localizer`; new keys in `app_en.arb`
+- [ ] UI uses `ClayContainer`/`AppColors`/Bricolage; transitions animated
+- [ ] Layout responsive (see `clarity-responsive`) — no fixed screen-sized pixels
+- [ ] `flutter analyze` clean
+
+---
+
+## Important Files to Reference Quickly
+
+| Purpose | File |
+|---------|------|
+| DI wiring | `lib/core/di/injection_container.dart` |
+| Color palette | `lib/core/theme/app_colors.dart` |
+| Neumorphic card | `lib/features/weather/presentation/widgets/clay_container.dart` |
+| Responsive breakpoints | `lib/core/responsive/breakpoints.dart` |
+| Localization runtime | `lib/core/utils/localizer.dart` |
+| Weather entity | `lib/features/weather/domain/entities/weather.dart` |
+| Weather repo impl | `lib/features/weather/data/repositories/weather_repository_impl.dart` |
+| Weather BLoC | `lib/features/weather/presentation/bloc/weather_bloc.dart` |
+| Main shell | `lib/features/navigation/presentation/pages/main_screen.dart` |
+| Settings entity | `lib/features/settings/domain/entities/app_settings.dart` |
+| Settings BLoC | `lib/features/settings/presentation/bloc/settings_bloc.dart` |
+| App router | `lib/core/router/app_router.dart` |
+
+---
+
+## Known Doc Drift (MEMORY_INDEX.md vs Reality)
+
+- Doc says `clay_containers` package → **custom** `ClayContainer` widget
+- Doc says `AppColors.getSurface(isDarkMode)` → **does not exist**; dark mode removed, `isDarkMode` forced `false`
+- Doc says "30+ languages" → **29** `.arb` files
+- `flutter_inset_shadow` in pubspec → **unused** in lib/
+
+Trust the code and this memory over the doc.
+
+---
+
+## Commands
+
+```bash
+# Analyze
+flutter analyze
+
+# Test
+flutter test
+
+# Run
+flutter run
+
+# Localization
+crowdin push   # upload app_en.arb
+crowdin pull   # download 28 translations
+
+# Build
+flutter build apk / ios / web / macos / windows / linux
+```
+
+---
+
+## Project-Specific Conventions Summary
+
+| Convention | Rule |
+|------------|------|
+| File naming | `snake_case.dart` |
+| Class naming | `PascalCase` |
+| One public class per file | Yes |
+| Feature imports | Relative (`../../domain/...`) — no `package:` for own code |
+| State classes | `abstract class XState extends Equatable` + subclasses (Initial/Loading/Loaded/Error) — **not sealed** |
+| Event classes | Same Equatable style (or `part` single-file like Settings) |
+| BLoC handlers | `on<Event>(_handler)` in constructor |
+| Either handling | `.fold((f)=>emit(Error), (d)=>emit(Loaded))` |
+| Text scaling | Respect but bound: `MediaQuery.textScalerOf(context).clamp(0.9, 1.3)` |
+| Shadow clipping | Give ClayContainer room (padding on scroll views) |
+| Night icons | Missing in ClayWeatherIcon — add cases if needed |
+| Settings persistence | Direct SharedPreferences in BLoC (no repo layer) |
+
+---
+
+---
+
+## 🧭 Codebase Navigation Guide
+
+### How to Find Things Fast (Grep Recipes)
+
+```bash
+# Where is a BLoC event handled?
+grep -rn "on<.*Event>" lib/
+
+# All DI registrations
+grep -n "register" lib/core/di/injection_container.dart
+
+# Every user-facing string (should ALL go through Localizer)
+grep -rn "Localizer.localize" lib/
+
+# Find a translation key across all 29 languages
+grep -rn '"my_key"' lib/l10n/
+
+# Every neumorphic container usage
+grep -rn "ClayContainer" lib/
+
+# Hardcoded sizes (responsive debt)
+grep -rn "fontSize:\|height: [0-9]" lib/features
+
+# Exception → Failure mapping
+grep -rn "on .*Exception" lib/features/*/data/repositories/
+
+# Where a BLoC is provided
+grep -rn "BlocProvider" lib/
+```
+
+### Entry Points (Read in This Order for Cold Start)
+
+1. **`lib/main.dart`** — Bootstrap: `WidgetsFlutterBinding` → `initializeDateFormatting` → `EnvConfig.load()` → `di.init()` → `Localizer.init()` → `runApp`
+2. **`lib/core/di/injection_container.dart`** — Composition root (every dependency wired here)
+3. **`lib/core/router/app_router.dart`** — GoRouter: single `/` route providing `WeatherBloc` → `MainScreen`
+4. **`lib/features/navigation/presentation/pages/main_screen.dart`** — Real shell: `PageView` (Weather/Forecast), sliding bottom nav, app bar with menu+search, settings→weather `BlocListener`
+
+### Feature Template — Where Code Lives
+
+```
+lib/features/<feature>/
+├── domain/
+│   ├── entities/<entity>.dart           # Pure Equatable class
+│   ├── repositories/<feature>_repository.dart  # Abstract interface
+│   └── usecases/<verb>.dart             # UseCase<Entity, Params>
+├── data/
+│   ├── models/<entity>_model.dart       # DTO extends entity + fromJson
+│   ├── datasources/<feature>_remote_data_source.dart  # Interface + Dio impl
+│   └── repositories/<feature>_repository_impl.dart    # try/catch → Either
+└── presentation/
+    ├── bloc/<feature>_bloc.dart / _event.dart / _state.dart
+    ├── pages/<feature>_page.dart
+    └── widgets/...
+```
+
+---
+
+## 🛠 Skill Usage Guide — Which Skill for Which Task
+
+### Available Skills (Pre-loaded)
+
+| Skill | File | Purpose |
+|-------|------|---------|
+| **clarity-add-feature** | `.claude/skills/clarity-add-feature/SKILL.md` | Step-by-step recipe for ANY new feature/screen/data source/setting/string |
+| **clarity-architecture** | `.claude/skills/clarity-architecture/SKILL.md` | Layer boundaries, DI rules, error handling, BLoC conventions, naming |
+| **clarity-design-system** | `.claude/skills/clarity-design-system/SKILL.md` | Colors, ClayContainer, ClayWeatherIcon, typography, motion patterns, localization |
+| **clarity-navigation** | `.claude/skills/clarity-navigation/SKILL.md` | Full file index, data flow trace, grep recipes, known doc drift |
+| **clarity-responsive** | `.claude/skills/clarity-responsive/SKILL.md` | Breakpoints, kill fixed heights, cap width, grid columns, master-detail, platform affordances |
+| **flutter-bloc** | `~/.claude/skills/flutter-bloc/SKILL.md` | Clean layer separation, Bloc/Cubit API, sealed states, responsive layout tools |
+| **flutter-distinctive-design** | `~/.claude/skills/flutter-distinctive-design/SKILL.md` | Theme system, font pairing, design tokens (ThemeExtension), motion, anti-slop rules |
+
+### Task → Skill Mapping
+
+| Task | Primary Skill(s) | Secondary |
+|------|------------------|-----------|
+| **Add new feature** (new API, new data, new BLoC) | `clarity-add-feature` | `clarity-architecture`, `clarity-design-system`, `clarity-responsive` |
+| **Add new page/tab in existing feature** | `clarity-add-feature` (Section B) | `clarity-navigation`, `clarity-responsive` |
+| **Add new setting** | `clarity-add-feature` (Section C) | `clarity-design-system` (UI), `clarity-architecture` (SettingsBloc pattern) |
+| **Add new user-facing string** | `clarity-add-feature` (Section D) | — |
+| **Fix responsive bug / adapt layout** | `clarity-responsive` | `clarity-design-system` (ClayContainer scales) |
+| **Change colors, shadows, typography, motion** | `clarity-design-system` | `clarity-responsive` |
+| **Refactor layer violation / fix DI** | `clarity-architecture` | `flutter-bloc` |
+| **Write / fix tests** | `flutter-tester` | `flutter-bloc` |
+| **Security audit** | `owasp-mobile-security-checker` | — |
+| **Understand codebase / find file / trace flow** | `clarity-navigation` | — |
+
+### How the AI Should Use Skills
+
+1. **ALWAYS load `clarity-navigation` first** when opening the repo or needing to locate something
+2. **For ANY new code** (feature, screen, setting, string): load `clarity-add-feature` and follow its steps exactly
+3. **When writing/refactoring Dart code**: keep `clarity-architecture` loaded — it enforces layer boundaries, DI, error handling, BLoC patterns
+4. **When touching UI** (widgets, colors, motion, text): load `clarity-design-system` + `clarity-responsive` together
+5. **When fixing layout on tablet/desktop/web**: load `clarity-responsive` — it has the exact breakpoint system and fix patterns
+6. **When writing tests**: load `flutter-tester` — it has Given-When-Then patterns, GetIt/SharedPreferences mocking
+7. **Never guess conventions** — the skills codify the project's actual patterns. If uncertain, grep the codebase (recipes in `clarity-navigation`) rather than assuming.
+
+### Skill Loading Protocol
+
+```markdown
+# At task start:
+- Read task → identify category above
+- Load primary skill + relevant secondary skills
+- Follow the skill's workflow exactly
+- Reference skill file paths/patterns when explaining decisions
+```
+
+---
+
+*This memory file was created by analyzing the entire codebase and all 5 Clarity skills + 2 Flutter skills. Update it when architecture, patterns, or conventions change.*

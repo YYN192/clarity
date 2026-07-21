@@ -1,0 +1,16 @@
+{
+  "name": "clarity-weather-alerts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Scheduled severe-weather alert dispatcher for the Clarity app (FCM + OpenWeather).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.2.0"
+  }
+}

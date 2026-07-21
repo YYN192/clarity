@@ -1,0 +1,8 @@
+project_id: '913069'
+api_token_env: CROWDIN_PERSONAL_TOKEN
+base_path: "."
+preserve_hierarchy: true
+
+files:
+  - source: /lib/l10n/app_en.arb
+    translation: /lib/l10n/app_%two_letters_code%.arb

@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "971914231376",
+    "project_id": "clarity-d3d92",
+    "storage_bucket": "clarity-d3d92.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971914231376:android:fc56217a71a611c4ce1b55",
+        "android_client_info": {
+          "package_name": "com.example.clarity"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "971914231376-6s8h8iegm28r3lv284m01mvc8cbe8kuq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.clarity",
+            "certificate_hash": "2c62de962433416c3ea3df370e7e80237f183593"
+          }
+        },
+        {
+          "client_id": "971914231376-2o0cgaij6v0teg27r44nmeoph4ns9kpj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzjl0IHfX-4ZU_L7HahI6-LmVCQkDWOHc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "971914231376-2o0cgaij6v0teg27r44nmeoph4ns9kpj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "971914231376-urosmrtul7htbimrbjh65sg8hic8nfcq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.clarity"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

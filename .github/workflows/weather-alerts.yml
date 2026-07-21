@@ -1,0 +1,31 @@
+name: Severe weather alerts
+
+on:
+  # GitHub cron is best-effort and is often delayed by 5–15 minutes; that's fine
+  # for weather alerts. Note: scheduled workflows are auto-disabled after 60 days
+  # of repository inactivity.
+  schedule:
+    - cron: '*/30 * * * *'
+  # Lets you trigger a run by hand from the Actions tab (useful for testing).
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: tools/weather-alerts
+        run: npm install --omit=dev
+
+      - name: Send severe weather alerts
+        working-directory: tools/weather-alerts
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node index.mjs

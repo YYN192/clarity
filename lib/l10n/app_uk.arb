@@ -1,0 +1,111 @@
+{
+  "@@locale": "uk",
+  "home": "Home",
+  "@home": {
+    "description": "Navigation label for the home screen"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Navigation label for the settings screen"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Navigation label for the profile screen"
+  },
+  "appearance": "APPEARANCE",
+  "@appearance": {
+    "description": "Section header for appearance settings"
+  },
+  "dark_theme": "Dark Theme",
+  "@dark_theme": {
+    "description": "Label for dark mode toggle"
+  },
+  "light_theme": "Light Theme",
+  "@light_theme": {
+    "description": "Label for light mode toggle"
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Header for today's weather"
+  },
+  "forecast": "Forecast",
+  "@forecast": {
+    "description": "Navigation label for the forecast screen"
+  },
+  "next_days": "Next Days",
+  "@next_days": {
+    "description": "Label for the upcoming days list"
+  },
+  "upcoming": "Upcoming",
+  "@upcoming": {
+    "description": "Label for the upcoming weather list"
+  },
+  "preferences": "PREFERENCES",
+  "@preferences": {
+    "description": "Section header for user preferences"
+  },
+  "tailor_clarity": "Tailor your\nclarity",
+  "@tailor_clarity": {
+    "description": "Main title on settings page"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Label for language selection"
+  },
+  "temperature": "Temperature",
+  "@temperature": {
+    "description": "Label for temperature unit setting"
+  },
+  "wind_speed": "Wind Speed",
+  "@wind_speed": {
+    "description": "Label for wind speed unit setting"
+  },
+  "pressure": "Pressure",
+  "@pressure": {
+    "description": "Label for pressure unit setting"
+  },
+  "severe_alerts": "Severe Weather Alerts",
+  "@severe_alerts": {
+    "description": "Label for severe weather alerts toggle"
+  },
+  "receive_notifications": "Receive notifications",
+  "@receive_notifications": {
+    "description": "Description for weather alerts toggle"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Standard cancel button text"
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Standard search button text"
+  },
+  "search_city": "Search City",
+  "@search_city": {
+    "description": "Title for the city search dialog"
+  },
+  "enter_city": "Enter city name",
+  "@enter_city": {
+    "description": "Hint text for the city search field"
+  },
+  "7_day_forecast": "7-Day Forecast",
+  "@7_day_forecast": {
+    "description": "Title for the 7-day forecast page"
+  },
+  "humidity": "Humidity",
+  "@humidity": {
+    "description": "Weather metric label"
+  },
+  "uv_index": "UV Index",
+  "@uv_index": {
+    "description": "Weather metric label"
+  },
+  "visibility": "Visibility",
+  "@visibility": {
+    "description": "Weather metric label"
+  },
+  "dew_point": "Dew Point",
+  "@dew_point": {
+    "description": "Weather metric label"
+  }
+}
