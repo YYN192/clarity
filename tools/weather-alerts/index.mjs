@@ -187,7 +187,18 @@ async function main() {
       continue;
     }
 
-    const alert = classify(weather);
+    // classify() returns null for unremarkable conditions, so in force mode
+    // substitute a synthetic alert rather than skipping the cell — otherwise
+    // the test can only fire when the weather is already severe.
+    const alert =
+      classify(weather) ??
+      (FORCE_ALERT
+        ? {
+            key: 'test',
+            title: 'Test alert',
+            detail: 'Test alert for {city} — currently {temp}. Delivery is working.',
+          }
+        : null);
     if (!alert) {
       console.log(`${cell} (${weather.name}): clear`);
       continue;
