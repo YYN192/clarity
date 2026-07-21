@@ -15,9 +15,9 @@ Clarity is a **feature-first Clean Architecture** Flutter weather app (OpenWeath
 API), neumorphic "claymorphism" UI, **light-mode only**, with 29-language runtime
 localization. Read this to orient before touching anything.
 
-> The repo also has `MEMORY_INDEX.md` at the root — a hand-written developer guide.
-> It's useful but **partially stale** (see "Known doc drift" below); trust the code
-> and this index over it when they disagree.
+> Read `HANDOFF.md` at the repo root first — it carries live state, open work, and the
+> gotchas that cost the most time. (`MEMORY_INDEX.md` was deleted in `5717f71`; its
+> content lives in `CLAUDE_MEMORY.md`.)
 
 ## Entry points (read in this order to understand a cold start)
 
@@ -130,15 +130,18 @@ grep -rn "fontSize:\|height: [0-9]" lib/features
 grep -rn "on .*Exception" lib/features/*/data/repositories/
 ```
 
-## Known doc drift (MEMORY_INDEX.md vs. reality — verify before trusting the doc)
+## Facts that are easy to get wrong (re-verified against the code 2026-07-21)
 
-- Doc says design uses the **`clay_containers` package** → actually a **custom**
-  `ClayContainer` widget (`lib/features/weather/presentation/widgets/clay_container.dart`).
-  There is no `clay_containers` dependency.
-- Doc references `AppColors.getSurface(isDarkMode)` → **does not exist**; dark mode was
-  removed. `AppColors` is static light-only; `isDarkMode` fields remain but are forced `false`.
-- Doc says "30+ languages" → there are **29** `.arb` files.
-- `flutter_inset_shadow` is in `pubspec.yaml` but **unused** in `lib/`.
+- There is no **`clay_containers` package** — `ClayContainer` is a **custom** widget
+  (`lib/features/weather/presentation/widgets/clay_container.dart`).
+- `AppColors.getSurface(isDarkMode)` **does not exist**; dark mode was removed.
+  `AppColors` is static light-only; `isDarkMode` fields remain but are forced `false`.
+- There are **29** `.arb` files, not "30+".
+- `flutter_inset_shadow` **IS used** — imported by `clay_container.dart` to back the
+  `inset: true` (sunken) variant. **Do not remove it.** (Previously documented here as
+  unused; that was wrong.)
+- `http`, `translator`, `lottie` were removed in `5717f71` (zero imports repo-wide).
+  `dio` is the HTTP client.
 
 When these bug you, see `clarity-architecture` / `clarity-design-system` for the
 canonical current rules rather than the doc.

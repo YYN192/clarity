@@ -76,7 +76,7 @@ adding the secrets — the dispatcher had never completed a single run.
 |---|---|
 | 2.1 | Remove unused deps: `http`, `translator`, `lottie` (imported nowhere). |
 | 2.2 | Settings toggle still uses bright `functionalBlue` — user rejected that blue on profile. Switch to `cloudShadow` slate. |
-| 2.3 | Delete/reconcile stale `MEMORY_INDEX.md` (contradicts `CLAUDE_MEMORY.md`). |
+| ~~2.3~~ | ~~Delete stale `MEMORY_INDEX.md`~~ — ✅ done `5717f71` (content was fully covered by `CLAUDE_MEMORY.md`). |
 
 ### 🟢 P3 — Enhancements
 | # | Task |

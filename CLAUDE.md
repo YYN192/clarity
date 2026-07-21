@@ -10,7 +10,6 @@ blocked on the user, decisions already made (don't relitigate), and hard-won got
 save you hours. Keep it updated as work progresses.
 
 Depth order: `HANDOFF.md` (state) → `AGENTS.md` (graph tooling) → `CLAUDE_MEMORY.md` (architecture).
-Note: root `MEMORY_INDEX.md` is **stale** — prefer `CLAUDE_MEMORY.md`.
 
 ## Code Review Graph
 

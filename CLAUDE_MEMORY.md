@@ -341,14 +341,21 @@ UI rebuilds via BlocBuilder + AnimatedSwitcher
 
 ---
 
-## Known Doc Drift (MEMORY_INDEX.md vs Reality)
+## Facts that are easy to get wrong (re-verified against the code 2026-07-21)
 
-- Doc says `clay_containers` package → **custom** `ClayContainer` widget
-- Doc says `AppColors.getSurface(isDarkMode)` → **does not exist**; dark mode removed, `isDarkMode` forced `false`
-- Doc says "30+ languages" → **29** `.arb` files
-- `flutter_inset_shadow` in pubspec → **unused** in lib/
+- There is **no `clay_containers` package** — `ClayContainer` is a custom widget at
+  `lib/features/weather/presentation/widgets/clay_container.dart`.
+- `AppColors.getSurface(isDarkMode)` **does not exist**; dark mode was removed and
+  `isDarkMode` is forced `false`.
+- **29** `.arb` files, not "30+".
+- `flutter_inset_shadow` **IS used** — imported by `clay_container.dart` to back the
+  `inset: true` (sunken) variant. **Do not remove it.** (This entry previously claimed
+  the opposite; that was wrong and would have broken the clay UI.)
 
-Trust the code and this memory over the doc.
+Unused deps `http`, `translator` and `lottie` were removed in `5717f71` — verified zero
+imports repo-wide. `dio` is the real HTTP client.
+
+Trust the code over any doc, including this one — verify before acting on a claim here.
 
 ---
 
