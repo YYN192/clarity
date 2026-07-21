@@ -2,6 +2,16 @@
 
 Flutter weather app — Clean Architecture, BLoC, Firebase, dartz, GetIt.
 
+## ⚠️ START HERE — read `HANDOFF.md` first
+
+`HANDOFF.md` is the live session-handoff doc: current state, what's pending, what's
+blocked on the user, decisions already made (don't relitigate), and hard-won gotchas
+(graph quirks, emulator quirks, build landmines already fixed). Reading it first will
+save you hours. Keep it updated as work progresses.
+
+Depth order: `HANDOFF.md` (state) → `AGENTS.md` (graph tooling) → `CLAUDE_MEMORY.md` (architecture).
+Note: root `MEMORY_INDEX.md` is **stale** — prefer `CLAUDE_MEMORY.md`.
+
 ## Code Review Graph
 
 This project has a knowledge graph (`code-review-graph`) that indexes every Dart file.
@@ -13,6 +23,12 @@ Quick start:
 - `query_graph_tool(pattern="callers_of", target="getWeather")` — who calls this
 - `get_impact_radius_tool(changed_files=[...])` — blast radius
 - `detect_changes_tool()` — risk-scored review of current changes
+
+> **If the MCP tools aren't available** (they only load when a session starts *after*
+> `.mcp.json` exists), don't fall back to Grep — the CLI has an exact equivalent for
+> every tool: `code-review-graph search | query | impact | communities | architecture |
+> detect-changes | dead-code`. Both read the same `graph.db`. See `HANDOFF.md` §3 for
+> the Dart-specific query traps (notably: `callees_of` needs a **file path**, not a class).
 
 ## Architecture
 
