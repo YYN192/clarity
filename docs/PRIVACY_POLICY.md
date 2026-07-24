@@ -1,3 +1,8 @@
+---
+layout: default
+title: Privacy Policy
+---
+
 # Privacy Policy — Clarity
 
 **Last updated: 24 July 2026**
@@ -6,11 +11,7 @@ Clarity is a weather app that shows current conditions and forecasts, and can
 send severe-weather alerts for where your device is. This policy explains what
 it collects, why, and what you can do about it.
 
-> **You must host this at a public URL and enter that URL in the Play Console.**
-> GitHub Pages on this repository is sufficient. Replace the contact address
-> below before publishing.
-
-**Contact:** `CONTACT_EMAIL_HERE`
+**Contact:** [clarity.weather.app@gmail.com](mailto:clarity.weather.app@gmail.com)
 
 ## What Clarity collects
 

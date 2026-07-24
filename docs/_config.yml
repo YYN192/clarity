@@ -1,0 +1,9 @@
+# GitHub Pages config for the public privacy policy. Play requires the policy
+# to be reachable at a stable public URL; serving it from /docs keeps it
+# versioned alongside the code that determines what data is actually collected.
+theme: jekyll-theme-minimal
+title: Clarity
+description: Weather, with severe-weather alerts for where you are.
+# The submission pack is internal notes, not a public page.
+exclude:
+  - PLAY_LISTING.md
