@@ -169,49 +169,115 @@
     "description": "Info note shown on the profile page for anonymous users"
   },
   "days_active": "Days Active",
-  "@days_active": { "description": "Profile stat: days since the account was created" },
+  "@days_active": {
+    "description": "Profile stat: days since the account was created"
+  },
   "units": "Units",
-  "@units": { "description": "Profile stat: temperature unit" },
+  "@units": {
+    "description": "Profile stat: temperature unit"
+  },
   "alerts": "Alerts",
-  "@alerts": { "description": "Profile stat: severe weather alerts on/off" },
+  "@alerts": {
+    "description": "Profile stat: severe weather alerts on/off"
+  },
   "on": "On",
-  "@on": { "description": "Toggle state on" },
+  "@on": {
+    "description": "Toggle state on"
+  },
   "off": "Off",
-  "@off": { "description": "Toggle state off" },
+  "@off": {
+    "description": "Toggle state off"
+  },
   "account_details": "Account Details",
-  "@account_details": { "description": "Profile section header" },
+  "@account_details": {
+    "description": "Profile section header"
+  },
   "my_preferences": "Preferences",
-  "@my_preferences": { "description": "Profile section header for preference shortcuts" },
+  "@my_preferences": {
+    "description": "Profile section header for preference shortcuts"
+  },
   "google_account": "Google Account",
-  "@google_account": { "description": "Account type badge for Google sign-in" },
+  "@google_account": {
+    "description": "Account type badge for Google sign-in"
+  },
   "email_account": "Email Account",
-  "@email_account": { "description": "Account type badge for email/password sign-in" },
+  "@email_account": {
+    "description": "Account type badge for email/password sign-in"
+  },
   "member": "Member",
-  "@member": { "description": "Generic account type badge" },
+  "@member": {
+    "description": "Generic account type badge"
+  },
   "member_since": "Member since",
-  "@member_since": { "description": "Account detail: signup date label" },
+  "@member_since": {
+    "description": "Account detail: signup date label"
+  },
   "account_type": "Account Type",
-  "@account_type": { "description": "Account detail: sign-in method label" },
+  "@account_type": {
+    "description": "Account detail: sign-in method label"
+  },
   "edit_profile": "Edit Profile",
-  "@edit_profile": { "description": "Button to edit the user's profile" },
+  "@edit_profile": {
+    "description": "Button to edit the user's profile"
+  },
   "edit_name": "Edit Name",
-  "@edit_name": { "description": "Title of the edit-display-name dialog" },
+  "@edit_name": {
+    "description": "Title of the edit-display-name dialog"
+  },
   "display_name": "Display name",
-  "@display_name": { "description": "Hint for the display name field" },
+  "@display_name": {
+    "description": "Hint for the display name field"
+  },
   "save": "Save",
-  "@save": { "description": "Standard save button" },
+  "@save": {
+    "description": "Standard save button"
+  },
   "notification_settings": "Notification Settings",
-  "@notification_settings": { "description": "Profile preference row: notifications" },
+  "@notification_settings": {
+    "description": "Profile preference row: notifications"
+  },
   "app_preferences": "App Preferences",
-  "@app_preferences": { "description": "Profile preference row: units and language" },
+  "@app_preferences": {
+    "description": "Profile preference row: units and language"
+  },
   "guest_session": "Guest session",
-  "@guest_session": { "description": "Email value shown for anonymous users" },
+  "@guest_session": {
+    "description": "Email value shown for anonymous users"
+  },
   "retry": "Retry",
-  "@retry": { "description": "Button to retry loading the weather after an error" },
+  "@retry": {
+    "description": "Button to retry loading the weather after an error"
+  },
   "app_name": "Clarity",
-  "@app_name": { "description": "App brand name shown in the title bar and menu" },
+  "@app_name": {
+    "description": "App brand name shown in the title bar and menu"
+  },
   "app_version": "v2.4.0 • Studio Clarity",
-  "@app_version": { "description": "Version string shown at the bottom of the menu" },
+  "@app_version": {
+    "description": "Version string shown at the bottom of the menu"
+  },
   "search_for_a_city": "Search for a city",
-  "@search_for_a_city": { "description": "Placeholder shown when no city is selected yet" }
+  "@search_for_a_city": {
+    "description": "Placeholder shown when no city is selected yet"
+  },
+  "saved_cities": "Saved cities",
+  "@saved_cities": {
+    "description": "Heading above the bookmarked-cities list in the menu"
+  },
+  "no_saved_cities": "No saved cities yet. Tap the bookmark icon to add one.",
+  "@no_saved_cities": {
+    "description": "Shown when the user has not bookmarked any cities"
+  },
+  "saved_cities_unavailable": "Saved cities are unavailable right now.",
+  "@saved_cities_unavailable": {
+    "description": "Shown when the saved-cities list could not be loaded"
+  },
+  "save_city": "Save city",
+  "@save_city": {
+    "description": "Tooltip for the bookmark button when the city is not saved"
+  },
+  "remove_city": "Remove city",
+  "@remove_city": {
+    "description": "Tooltip for removing a city from the saved list"
+  }
 }

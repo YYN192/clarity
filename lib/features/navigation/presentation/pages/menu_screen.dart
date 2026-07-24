@@ -7,6 +7,12 @@ import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../settings/presentation/bloc/settings_bloc.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/pages/auth_gate.dart';
+import '../../../saved_cities/presentation/bloc/saved_cities_bloc.dart';
+import '../../../saved_cities/presentation/bloc/saved_cities_event.dart';
+import '../../../saved_cities/presentation/bloc/saved_cities_state.dart';
+import '../../../settings/domain/entities/app_settings.dart';
+import '../../../weather/presentation/bloc/weather_bloc.dart';
+import '../../../weather/presentation/bloc/weather_event.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -82,8 +88,10 @@ class MenuScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const Spacer(),
-                  
+                  const SizedBox(height: 32),
+                  Expanded(
+                    child: _SavedCitiesList(language: state.settings.language),
+                  ),
                   const SizedBox(height: 32),
                   Center(
                     child: Text(Localizer.localize('app_version', state.settings.language),
@@ -123,6 +131,105 @@ class MenuScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The user's bookmarked cities. Tapping one loads its weather and closes the
+/// menu; the trash icon removes it. Syncs through Firestore, so the list is the
+/// same on every device signed into this account.
+class _SavedCitiesList extends StatelessWidget {
+  const _SavedCitiesList({required this.language});
+
+  final String language;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<SavedCitiesBloc, SavedCitiesState>(
+      builder: (context, state) {
+        if (state.cities.isEmpty) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Text(
+              Localizer.localize(
+                state.status == SavedCitiesStatus.error
+                    ? 'saved_cities_unavailable'
+                    : 'no_saved_cities',
+                language,
+              ),
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              Localizer.localize('saved_cities', language),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.separated(
+                // Room for the clay shadows to paint without being clipped.
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: state.cities.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final city = state.cities[index];
+                  return GestureDetector(
+                    onTap: () {
+                      final settings = context.read<SettingsBloc>().state.settings;
+                      context.read<WeatherBloc>().add(GetWeatherEvent(
+                            city.name,
+                            units: settings.temperatureUnit == TemperatureUnit.celsius
+                                ? 'metric'
+                                : 'imperial',
+                            locale: Localizer.getLocaleCode(settings.language),
+                          ));
+                      Navigator.of(context).pop();
+                    },
+                    child: ClayContainer(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.place_outlined,
+                              color: AppColors.textPrimary, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              city.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: AppColors.textSecondary, size: 20),
+                            tooltip: Localizer.localize('remove_city', language),
+                            onPressed: () => context
+                                .read<SavedCitiesBloc>()
+                                .add(SavedCityRemoved(city.id)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -18,6 +18,10 @@ import '../../features/auth/data/datasources/firebase_auth_data_source.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/saved_cities/data/datasources/saved_cities_remote_data_source.dart';
+import '../../features/saved_cities/data/repositories/saved_cities_repository_impl.dart';
+import '../../features/saved_cities/domain/repositories/saved_cities_repository.dart';
+import '../../features/saved_cities/presentation/bloc/saved_cities_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -32,6 +36,15 @@ Future<void> init(EnvConfig envConfig) async {
         sharedPreferences: sl(),
         notificationService: sl(),
       ));
+
+  //! Features - Saved cities
+  sl.registerFactory(() => SavedCitiesBloc(repository: sl()));
+  sl.registerLazySingleton<SavedCitiesRepository>(
+    () => SavedCitiesRepositoryImpl(dataSource: sl()),
+  );
+  sl.registerLazySingleton<SavedCitiesRemoteDataSource>(
+    () => SavedCitiesRemoteDataSourceImpl(firestore: sl(), auth: sl()),
+  );
 
   //! Features - Settings
   sl.registerFactory(() => SettingsBloc(sharedPreferences: sl(), notificationService: sl()));

@@ -11,6 +11,10 @@ import '../../../weather/presentation/bloc/weather_event.dart';
 import '../../../weather/presentation/bloc/weather_state.dart';
 import '../../../settings/presentation/bloc/settings_bloc.dart';
 import '../../../settings/domain/entities/app_settings.dart';
+import '../../../saved_cities/domain/entities/saved_city.dart';
+import '../../../saved_cities/presentation/bloc/saved_cities_bloc.dart';
+import '../../../saved_cities/presentation/bloc/saved_cities_event.dart';
+import '../../../saved_cities/presentation/bloc/saved_cities_state.dart';
 import 'menu_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -72,8 +76,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 Navigator.of(context).push(
                   PageRouteBuilder(
                     pageBuilder: (context, animation, secondaryAnimation) =>
-                        BlocProvider.value(
-                      value: context.read<SettingsBloc>(),
+                        MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<SettingsBloc>()),
+                        BlocProvider.value(value: context.read<SavedCitiesBloc>()),
+                        BlocProvider.value(value: context.read<WeatherBloc>()),
+                      ],
                       child: const MenuScreen(),
                     ),
                     transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -92,6 +100,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             ),
             title: Text(Localizer.localize('app_name', settingsState.settings.language), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             actions: [
+              _buildBookmarkAction(context),
               IconButton(
                 icon: const Icon(Icons.search, color: AppColors.textPrimary),
                 onPressed: () => _showSearchDialog(context),
@@ -128,6 +137,41 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               },
             ),
           ),
+        );
+      },
+    );
+  }
+
+  /// Bookmark toggle for the city currently on screen. Hidden until weather has
+  /// loaded, since there is nothing to save before then.
+  Widget _buildBookmarkAction(BuildContext context) {
+    return BlocBuilder<WeatherBloc, WeatherState>(
+      builder: (context, weatherState) {
+        if (weatherState is! WeatherLoaded) return const SizedBox.shrink();
+        final city = weatherState.weather.cityName;
+
+        return BlocBuilder<SavedCitiesBloc, SavedCitiesState>(
+          builder: (context, savedState) {
+            final saved = savedState.contains(city);
+            return IconButton(
+              icon: Icon(
+                saved ? Icons.bookmark : Icons.bookmark_border,
+                color: AppColors.textPrimary,
+              ),
+              tooltip: Localizer.localize(
+                saved ? 'remove_city' : 'save_city',
+                context.read<SettingsBloc>().state.settings.language,
+              ),
+              onPressed: () {
+                final bloc = context.read<SavedCitiesBloc>();
+                if (saved) {
+                  bloc.add(SavedCityRemoved(SavedCity.idFor(city)));
+                } else {
+                  bloc.add(SavedCityAdded(city));
+                }
+              },
+            );
+          },
         );
       },
     );

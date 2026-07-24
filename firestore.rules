@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Deploy with: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-device push registration, keyed by the FCM token itself. The client
+    // only ever touches its own token document; the alert dispatcher reads the
+    // collection with the Admin SDK, which bypasses these rules.
+    match /fcm_tokens/{token} {
+      allow read: if false;
+      allow write: if request.auth != null
+                   && request.resource.data.token == token;
+      allow delete: if request.auth != null;
+    }
+
+    // Bookmarked cities, scoped under the owning uid so no query needs an
+    // index and the rule is a straight uid comparison. Anonymous users have a
+    // uid too, and linking to a real account preserves it — so an upgraded
+    // account keeps its saved cities.
+    match /users/{uid}/saved_cities/{cityId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
