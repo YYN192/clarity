@@ -1,6 +1,6 @@
 # Clarity — Session Handoff
 
-**Last updated:** 2026-07-21 · **Commit:** (see git log — release-config session 2026-07-24) · **Remote:** `github.com/YYN192/clarity` (in sync)
+**Last updated:** 2026-07-21 · **Commit:** `b8d9262` · **Remote:** `github.com/YYN192/clarity` (in sync)
 **Health:** `flutter analyze` → *No issues found*. App builds and runs on the Android emulator.
 
 Read this first, then `AGENTS.md` (graph tooling) and `CLAUDE_MEMORY.md` (deep architecture).
@@ -111,7 +111,7 @@ gh secret list                          # names + timestamps only, never values
 
 Confirm a push actually landed (don't trust `sent 1` alone — that only means FCM accepted it):
 ```bash
-adb shell dumpsys notification --noredact | grep -A30 "pkg=com.example.clarity" \
+adb shell dumpsys notification --noredact | grep -A30 "pkg=dev.glocean.clarity" \
   | grep -E "android\.(title|text)"
 ```
 
@@ -201,6 +201,15 @@ HyperOS blocks three things the emulator allows. All three fail *loudly*, so rea
 - Android Studio reads the same adb daemon — if `adb devices` sees it, Studio will too.
 
 ### Release / Play Store
+- **Submission pack is in `docs/`** — `PLAY_LISTING.md` (listing copy, data-safety
+  answers, pre-launch checklist) and `PRIVACY_POLICY.md` (**must be hosted at a public
+  URL** and the contact address filled in before submitting).
+- **Notification channel:** alerts route to `severe_weather_alerts` (IMPORTANCE_HIGH),
+  declared in the manifest *and* created in `MainActivity` — a channel id with no matching
+  channel silently falls back to "Miscellaneous". A channel's importance and sound become
+  **user-owned after first creation**; changing them in code does nothing on existing
+  installs, so getting this right before launch matters.
+- **Bump `version:` in `pubspec.yaml` for every upload** — Play rejects a repeated versionCode.
 - **Signing:** upload keystore at `android/upload-keystore.jks` + `android/key.properties`
   (both gitignored — **back them up**; with Play App Signing the upload key is replaceable,
   but only through Google support). Release builds fall back to debug signing when
@@ -237,7 +246,7 @@ HyperOS blocks three things the emulator allows. All three fail *loudly*, so rea
 - Launching an AVD that's already running gives a **FATAL "same AVD"** error. Check
   `adb devices` first — Android Studio runs it headless (`-qt-hide-window`) and mirrors it.
 - `adb shell am force-stop <pkg>` also **terminates `flutter run`** (it exits 0).
-- Grant permissions without dialogs: `adb shell pm grant com.example.clarity android.permission.ACCESS_FINE_LOCATION`
+- Grant permissions without dialogs: `adb shell pm grant dev.glocean.clarity android.permission.ACCESS_FINE_LOCATION`
   (also `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`). **Emulator only** — HyperOS rejects
   this with a `SecurityException`; see the Xiaomi section above.
 - Set a GPS fix: `adb emu geo fix -122.084 37.422`.
