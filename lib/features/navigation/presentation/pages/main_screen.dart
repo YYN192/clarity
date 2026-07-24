@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/localizer.dart';
 import '../../../weather/presentation/pages/weather_page.dart';
@@ -22,6 +23,10 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
+  // Separate controllers for the wide layout, where both panes are attached at
+  // once — one controller cannot drive two scroll positions.
+  final ScrollController _todayScrollController = ScrollController();
+  final ScrollController _forecastScrollController = ScrollController();
   late PageController _pageController;
 
   @override
@@ -49,6 +54,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
+    _todayScrollController.dispose();
+    _forecastScrollController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -109,34 +116,82 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 weatherBloc.add(LoadInitialWeather(units: unitString, locale: locale));
               }
             },
-            child: Stack(
-              children: [
-                PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    WeatherPage(key: const ValueKey(0), scrollController: _scrollController),
-                    ForecastPage(key: const ValueKey(1), scrollController: _scrollController),
-                  ],
-                ),
-                Positioned(
-                  bottom: 32,
-                  left: 24,
-                  right: 24,
-                  // Cap + center the nav so it doesn't span the whole width on
-                  // tablet/desktop.
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 500),
-                      child: _buildBottomNav(),
-                    ),
-                  ),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Phones page between Today and Forecast; anything wider has
+                // room to show both at once, so the pager and its bottom nav
+                // would just be hiding half the screen.
+                if (screenTypeOf(constraints.maxWidth) == ScreenType.phone) {
+                  return _buildPagedView();
+                }
+                return _buildSideBySideView();
+              },
             ),
           ),
         );
       },
+    );
+  }
+
+  /// Phone layout: one page at a time, with the floating bottom nav.
+  Widget _buildPagedView() {
+    return Stack(
+      children: [
+        PageView(
+          controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: [
+            WeatherPage(key: const ValueKey(0), scrollController: _scrollController),
+            ForecastPage(key: const ValueKey(1), scrollController: _scrollController),
+          ],
+        ),
+        Positioned(
+          bottom: 32,
+          left: 24,
+          right: 24,
+          // Cap + center the nav so it doesn't span the whole width on
+          // tablet/desktop.
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: _buildBottomNav(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Tablet/desktop layout: both panes visible, no pager and no bottom nav.
+  ///
+  /// Each pane scrolls independently — sharing `_scrollController` across two
+  /// simultaneously-attached views would throw, since a ScrollController can
+  /// only drive one position at a time.
+  Widget _buildSideBySideView() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              flex: 2,
+              child: WeatherPage(
+                key: const ValueKey('wide-today'),
+                scrollController: _todayScrollController,
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 3,
+              child: ForecastPage(
+                key: const ValueKey('wide-forecast'),
+                scrollController: _forecastScrollController,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
