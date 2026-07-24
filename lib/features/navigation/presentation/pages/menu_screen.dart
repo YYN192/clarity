@@ -182,16 +182,18 @@ class _SavedCitiesListState extends State<_SavedCitiesList> {
   bool _hasAbove = false;
   bool _hasBelow = false;
 
-  /// Height of the fade at each edge, matched to the list's vertical padding.
-  ///
-  /// That alignment matters: at rest the scrim covers exactly the padding and
-  /// no card, so nothing is dimmed for no reason. Only once a card scrolls into
-  /// that band does it start to fade — which is precisely the "more below" cue.
-  /// It also clears the 25px shadow reach, so a shadow never terminates against
-  /// a visible edge.
-  static const double _scrimHeight = _listVerticalPadding;
+  /// Height of the fade at each edge. Covers a card that has scrolled part-way
+  /// out, without dimming one that is merely near the edge.
+  static const double _scrimHeight = 28;
 
-  static const double _listVerticalPadding = 28;
+  /// Must exceed the shadow's *rendered* extent, not its nominal reach.
+  ///
+  /// `blurRadius: 16` becomes sigma ≈ 9.7 (Flutter's radius*0.57735 + 0.5), and
+  /// a Gaussian is still faintly visible to ~3 sigma ≈ 29px; with offset 8 and
+  /// spread 1 the tail runs to roughly 38px. At 28 the viewport clipped that
+  /// tail into a hard line spanning the full width — visible precisely at the
+  /// scroll extremes, where the scrim switches off and stops hiding it.
+  static const double _listVerticalPadding = 44;
 
   @override
   void initState() {
