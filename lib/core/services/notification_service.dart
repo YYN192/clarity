@@ -19,13 +19,27 @@ abstract class NotificationService {
   /// Removes this device's token registration.
   Future<void> disable();
 
-  /// Records the location this device wants alerts for, plus display prefs so
-  /// the backend can format the message. Cached until the device is registered,
-  /// then flushed to its token document.
-  Future<void> updateLocation({
+  /// Records where this **device** is, for alert targeting.
+  ///
+  /// Must only be called with GPS-derived coordinates. The city being browsed
+  /// is irrelevant here — searching for Tokyo must not redirect this phone's
+  /// storm alerts to Tokyo.
+  ///
+  /// [city] is written together with the coordinates so the two can never drift
+  /// apart; pass `null` when only a position is known and let the backend
+  /// resolve the name from the coordinates.
+  ///
+  /// Cached until the device is registered, then flushed to its token document.
+  Future<void> updateAlertLocation({
     required double lat,
     required double lon,
-    required String city,
+    String? city,
+  });
+
+  /// Records display preferences so the backend can format the message text.
+  /// Independent of [updateAlertLocation] — changing units must not move where
+  /// alerts are sent.
+  Future<void> updateDisplayPreferences({
     required String units,
     required String language,
   });
@@ -112,8 +126,9 @@ class NotificationServiceImpl implements NotificationService {
       _registered = true;
       debugPrint('FCM registration token (paste into Firebase Console test send): $token');
       await _storeToken(token);
-      // Flush any location captured before registration completed.
-      await _writeLocation();
+      // Flush anything captured before registration completed.
+      await _writeAlertLocation();
+      await _writeDisplayPreferences();
       return true;
     } catch (e) {
       debugPrint('Could not enable push notifications: $e');
@@ -136,23 +151,30 @@ class NotificationServiceImpl implements NotificationService {
   }
 
   @override
-  Future<void> updateLocation({
+  Future<void> updateAlertLocation({
     required double lat,
     required double lon,
-    required String city,
-    required String units,
-    required String language,
+    String? city,
   }) async {
     _lat = lat;
     _lon = lon;
     _city = city;
+    if (!_registered) return; // flushed by enable() once registered
+    await _writeAlertLocation();
+  }
+
+  @override
+  Future<void> updateDisplayPreferences({
+    required String units,
+    required String language,
+  }) async {
     _units = units;
     _language = language;
     if (!_registered) return; // flushed by enable() once registered
-    await _writeLocation();
+    await _writeDisplayPreferences();
   }
 
-  Future<void> _writeLocation() async {
+  Future<void> _writeAlertLocation() async {
     if (_lat == null || _lon == null) return;
     try {
       final token = await messaging.getToken();
@@ -161,13 +183,31 @@ class NotificationServiceImpl implements NotificationService {
         'token': token, // required by the Firestore security rule
         'lat': _lat,
         'lon': _lon,
+        // Always written alongside lat/lon — a null here clears a previously
+        // stored name rather than leaving one that no longer matches.
         'city': _city,
+        // Distinct from `updatedAt`: the dispatcher uses this to skip devices
+        // whose position is too old to trust.
+        'locationUpdatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Failed to store alert location: $e');
+    }
+  }
+
+  Future<void> _writeDisplayPreferences() async {
+    try {
+      final token = await messaging.getToken();
+      if (token == null) return;
+      await firestore.collection(_collection).doc(token).set({
+        'token': token,
         'units': _units,
         'lang': _language,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Failed to store alert location: $e');
+      debugPrint('Failed to store display preferences: $e');
     }
   }
 

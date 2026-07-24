@@ -26,6 +26,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   }) : super(WeatherInitial()) {
     on<LoadInitialWeather>(_onLoadInitialWeather);
     on<GetWeatherEvent>(_onGetWeather);
+    on<RefreshAlertLocation>(_onRefreshAlertLocation);
   }
 
   Future<void> _onLoadInitialWeather(
@@ -38,6 +39,9 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     final lastCity = sharedPreferences.getString(_lastCityKey);
     if (lastCity != null) {
       await _fetchWeatherByCity(lastCity, event.units, event.locale, emit);
+      // The displayed city is a browsing choice; alerts must still track the
+      // device, so refresh the alert position separately.
+      await _refreshAlertLocationFromGps();
       return;
     }
 
@@ -53,7 +57,10 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
         ));
         result.fold(
           (failure) => emit(WeatherError(failure.message)),
-          (weather) => _emitLoaded(weather, event.units, event.locale, emit),
+          // These coordinates came from GPS, so the resolved city name matches
+          // the device's real position and is safe to store for alerts.
+          (weather) => _emitLoaded(weather, event.units, event.locale, emit,
+              fromGps: true),
         );
       } else {
         // Fallback to a default if GPS failed silently
@@ -62,7 +69,36 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     } catch (e) {
       // Location unavailable (permission denied, services off, no GPS fix) —
       // fall back to a default city instead of dead-ending on an error screen.
+      // No alert-location refresh here: GPS has already failed.
       await _fetchWeatherByCity(_fallbackCity, event.units, event.locale, emit);
+    }
+  }
+
+  Future<void> _onRefreshAlertLocation(
+    RefreshAlertLocation event,
+    Emitter<WeatherState> emit,
+  ) async {
+    // Intentionally emits nothing — this only moves where alerts are sent.
+    await _refreshAlertLocationFromGps();
+  }
+
+  /// Points the alert backend at the device's current position.
+  ///
+  /// Passes `city: null` because no city name is known for these coordinates
+  /// here; the dispatcher resolves one from OpenWeather. Storing a name from
+  /// elsewhere is how alerts ended up following the searched city.
+  Future<void> _refreshAlertLocationFromGps() async {
+    try {
+      final position = await locationService.getCurrentPosition();
+      if (position == null) return;
+      await notificationService.updateAlertLocation(
+        lat: position.latitude,
+        lon: position.longitude,
+        city: null,
+      );
+    } catch (_) {
+      // Location unavailable — keep the last known alert location rather than
+      // clearing it, so the device still gets alerts for where it last was.
     }
   }
 
@@ -81,20 +117,32 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     ));
     result.fold(
       (failure) => emit(WeatherError(failure.message)),
-      (weather) => _emitLoaded(weather, units, locale, emit),
+      // A city lookup says nothing about where the device is, so this must not
+      // move the alert location.
+      (weather) => _emitLoaded(weather, units, locale, emit, fromGps: false),
     );
   }
 
-  /// Emits the loaded state and tells the notification service where this
-  /// device is, so the alert backend knows which coordinates to monitor.
-  void _emitLoaded(Weather weather, String units, String locale, Emitter<WeatherState> emit) {
+  /// Emits the loaded state and syncs display preferences.
+  ///
+  /// [fromGps] must be true only when [weather] was fetched from the device's
+  /// own coordinates — that is the sole case where the displayed location is
+  /// also the correct target for severe-weather alerts.
+  void _emitLoaded(
+    Weather weather,
+    String units,
+    String locale,
+    Emitter<WeatherState> emit, {
+    required bool fromGps,
+  }) {
     emit(WeatherLoaded(weather, units: units));
-    notificationService.updateLocation(
-      lat: weather.lat,
-      lon: weather.lon,
-      city: weather.cityName,
-      units: units,
-      language: locale,
-    );
+    notificationService.updateDisplayPreferences(units: units, language: locale);
+    if (fromGps) {
+      notificationService.updateAlertLocation(
+        lat: weather.lat,
+        lon: weather.lon,
+        city: weather.cityName,
+      );
+    }
   }
 }

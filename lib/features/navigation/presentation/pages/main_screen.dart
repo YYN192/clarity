@@ -19,7 +19,7 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
   late PageController _pageController;
@@ -27,6 +27,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pageController = PageController(initialPage: _currentIndex);
     final settings = context.read<SettingsBloc>().state.settings;
     final unitString = settings.temperatureUnit == TemperatureUnit.celsius ? 'metric' : 'imperial';
@@ -35,7 +36,18 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // A phone that hasn't been opened in a week would otherwise keep week-old
+    // coordinates and be alerted about somewhere it no longer is.
+    if (state == AppLifecycleState.resumed) {
+      context.read<WeatherBloc>().add(const RefreshAlertLocation());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _pageController.dispose();
     super.dispose();
