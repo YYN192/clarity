@@ -73,14 +73,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             leading: IconButton(
               icon: const Icon(Icons.menu, color: AppColors.textPrimary),
               onPressed: () {
+                // Read the blocs from *this* context, not the route's. A pushed
+                // route sits above the router-level providers, so resolving
+                // SavedCitiesBloc/WeatherBloc inside pageBuilder throws
+                // ProviderNotFoundError. (SettingsBloc happens to work because
+                // it is provided app-wide in main.dart.)
+                final settingsBloc = context.read<SettingsBloc>();
+                final savedCitiesBloc = context.read<SavedCitiesBloc>();
+                final weatherBloc = context.read<WeatherBloc>();
                 Navigator.of(context).push(
                   PageRouteBuilder(
                     pageBuilder: (context, animation, secondaryAnimation) =>
                         MultiBlocProvider(
                       providers: [
-                        BlocProvider.value(value: context.read<SettingsBloc>()),
-                        BlocProvider.value(value: context.read<SavedCitiesBloc>()),
-                        BlocProvider.value(value: context.read<WeatherBloc>()),
+                        BlocProvider.value(value: settingsBloc),
+                        BlocProvider.value(value: savedCitiesBloc),
+                        BlocProvider.value(value: weatherBloc),
                       ],
                       child: const MenuScreen(),
                     ),
