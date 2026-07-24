@@ -140,7 +140,7 @@ class SettingsPage extends StatelessWidget {
                           context.read<SettingsBloc>().add(UpdateSettings(
                               settings.copyWith(severeWeatherAlerts: val)));
                         },
-                        activeThumbColor: AppColors.functionalBlue,
+                        activeThumbColor: AppColors.cloudShadow,
                       ),
                     ],
                   ),

@@ -45,7 +45,10 @@ class ClayWeatherIcon extends StatelessWidget {
       case 'Storm':
         return (icon: Icons.thunderstorm_rounded, color: AppColors.textPrimary);
       case 'Snow':
-        return (icon: Icons.ac_unit_rounded, color: Colors.white);
+        // Not Colors.white: the clay card is white and the chip behind the icon
+        // is that same white at 10% alpha, so a white snowflake had a contrast
+        // ratio of 1.0 against its own background — invisible.
+        return (icon: Icons.ac_unit_rounded, color: AppColors.atmosphericBlueGray);
       case 'Fog':
         return (icon: Icons.foggy, color: AppColors.inactiveBlueGray);
       default:

@@ -1,8 +1,18 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:clarity/core/theme/app_colors.dart';
 import 'package:clarity/core/utils/weather_icon_mapper.dart';
 import 'package:clarity/features/weather/presentation/widgets/clay_weather_icon.dart';
+
+/// WCAG relative-contrast ratio, 1.0 (identical) … 21.0 (black on white).
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+}
 
 /// A condition string that will never match a case, so `styleFor` returns the
 /// `default` branch. Anything that compares equal to this fell through.
@@ -51,6 +61,23 @@ void main() {
 
     test('fog has its own icon rather than the sun', () {
       expect(ClayWeatherIcon.styleFor('Fog'), isNot(fallback));
+    });
+
+    test('no condition tint disappears into the clay card', () {
+      // Snow shipped as Colors.white on a white card with a white-at-10% chip
+      // behind it — a contrast ratio of exactly 1.0. The floor is deliberately
+      // low: warmAccent (the pale cream sun) sits just above it at ~1.23 and is
+      // an accepted design choice, rescued by its halo and shadow.
+      final card = AppColors.getCardColor();
+      for (final condition in WeatherIconMapper.conditions) {
+        final color = ClayWeatherIcon.styleFor(condition).color;
+        expect(color, isNot(card), reason: '$condition is tinted the card colour');
+        expect(
+          _contrast(color, card),
+          greaterThan(1.2),
+          reason: '$condition is invisible against the card it sits on',
+        );
+      }
     });
   });
 
