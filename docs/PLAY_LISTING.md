@@ -12,7 +12,7 @@ of this commit — re-check them if the data model changes.
 | Artifact | `build/app/outputs/bundle/release/app-release.aab` |
 | Build command | `flutter build appbundle --release` |
 | Signing | upload keystore, `android/key.properties` (gitignored — **back it up**) |
-| Version | `1.0.0+1` from `pubspec.yaml` (`versionName+versionCode`) |
+| Version | `1.0.1+2` from `pubspec.yaml` (`versionName+versionCode`) |
 
 Bump `version:` in `pubspec.yaml` for every upload — Play rejects a repeated
 `versionCode`.
