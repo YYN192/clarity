@@ -166,15 +166,24 @@ class ForecastPage extends StatelessWidget {
             stops: const [0.0, 0.05, 0.95, 1.0],
           ).createShader(bounds),
           blendMode: BlendMode.dstIn,
-          child: SizedBox(
-            height: 120,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              separatorBuilder: (context, index) => const SizedBox(width: gap * 2),
-              itemBuilder: (context, index) =>
-                  SizedBox(width: 72, child: _miniHourItem(items[index], localeCode)),
+          // Content-sized, not fixed-height: a hardcoded height clipped these
+          // labels at large text scales. Only ~8 items, so nothing is lost by
+          // dropping the lazy list.
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0) const SizedBox(width: gap * 2),
+                    SizedBox(
+                        width: 72,
+                        child: _miniHourItem(items[i], localeCode)),
+                  ],
+                ],
+              ),
             ),
           ),
         );

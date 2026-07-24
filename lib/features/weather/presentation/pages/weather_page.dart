@@ -289,20 +289,31 @@ class _HourlyForecastStrip extends StatelessWidget {
             stops: const [0.0, 0.05, 0.95, 1.0],
           ).createShader(bounds),
           blendMode: BlendMode.dstIn,
-          child: SizedBox(
-            // Taller than the card + generous padding so the neumorphic shadow
-            // (offset 8 / blur 16 ≈ 25px reach) paints fully instead of being
-            // clipped by this horizontal viewport on small screens. Also pushes
-            // the first card past the leading edge fade.
-            height: 204,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (context, index) => const SizedBox(width: gap),
-              itemBuilder: (context, index) => SizedBox(
-                width: _minItemWidth,
-                child: _HourlyForecastItem(hourly: items[index], localeCode: localeCode),
+          // Sizes to its content rather than a fixed height, so the cards keep
+          // fitting at any text scale — a hardcoded height clipped the hour and
+          // temperature labels behind an overflow stripe at large accessibility
+          // sizes. Only ~8 hourly items exist, so a lazy ListView buys nothing
+          // and its bounded cross-axis is what forced the fixed height.
+          //
+          // The vertical padding keeps the neumorphic shadow (offset 8 / blur
+          // 16 ≈ 25px reach) from being clipped, and pushes the first card past
+          // the leading edge fade.
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0) const SizedBox(width: gap),
+                    SizedBox(
+                      width: _minItemWidth,
+                      child: _HourlyForecastItem(
+                          hourly: items[i], localeCode: localeCode),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
