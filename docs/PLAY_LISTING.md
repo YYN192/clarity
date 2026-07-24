@@ -67,7 +67,7 @@ upgrade to a full account later without losing your saved cities.
 - Feature graphic 1024×500
 - ≥2 phone screenshots; add 7" / 10" tablet shots to list as tablet-supported —
   the wide master-detail layout is worth showing
-- Privacy policy URL — host `docs/PRIVACY_POLICY.md` (GitHub Pages works)
+- Privacy policy URL — **https://yyn192.github.io/clarity/PRIVACY_POLICY.html** (live; served by GitHub Pages from `main/docs`)
 
 ## Data safety form
 
@@ -99,7 +99,8 @@ the background-location declaration form does not apply.
 - [ ] `flutter analyze` clean and `flutter test` green (CI enforces both)
 - [ ] `version:` bumped in `pubspec.yaml`
 - [ ] Signed AAB built and `jarsigner -verify` reports `jar verified`
-- [ ] Privacy policy published and its URL entered
+- [ ] Privacy policy URL entered in the Console: `https://yyn192.github.io/clarity/PRIVACY_POLICY.html`
+- [ ] `clarity.weather.app@gmail.com` mailbox actually exists and is monitored — the policy promises deletion requests are honoured there
 - [ ] Alerts verified end-to-end after any application-id change — an id change
       invalidates every existing notification token
 - [ ] Firestore rules deployed (`firebase deploy --only firestore:rules`)
