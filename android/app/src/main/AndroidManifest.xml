@@ -8,7 +8,7 @@
     <!-- Required for showing notifications on Android 13+ (FCM) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
-        android:label="clarity"
+        android:label="Clarity"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

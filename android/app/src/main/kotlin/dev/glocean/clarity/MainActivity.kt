@@ -1,4 +1,4 @@
-package com.example.clarity
+package dev.glocean.clarity
 
 import io.flutter.embedding.android.FlutterActivity
 

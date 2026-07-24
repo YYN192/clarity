@@ -48,6 +48,58 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:971914231376:android:979cc9949edb7127ce1b55",
+        "android_client_info": {
+          "package_name": "dev.glocean.clarity"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "971914231376-17onq3c36l99bt9iithhghh82qigft7j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.glocean.clarity",
+            "certificate_hash": "2c62de962433416c3ea3df370e7e80237f183593"
+          }
+        },
+        {
+          "client_id": "971914231376-b6ikrus6bh4pvg0esrk9iacpdk9mhp23.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "dev.glocean.clarity",
+            "certificate_hash": "033abbb4c8e5d0f9976921f8bbc8f9a9c34212ea"
+          }
+        },
+        {
+          "client_id": "971914231376-2o0cgaij6v0teg27r44nmeoph4ns9kpj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzjl0IHfX-4ZU_L7HahI6-LmVCQkDWOHc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "971914231376-2o0cgaij6v0teg27r44nmeoph4ns9kpj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "971914231376-urosmrtul7htbimrbjh65sg8hic8nfcq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.clarity"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

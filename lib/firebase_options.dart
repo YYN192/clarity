@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDzjl0IHfX-4ZU_L7HahI6-LmVCQkDWOHc',
-    appId: '1:971914231376:android:fc56217a71a611c4ce1b55',
+    appId: '1:971914231376:android:979cc9949edb7127ce1b55',
     messagingSenderId: '971914231376',
     projectId: 'clarity-d3d92',
     storageBucket: 'clarity-d3d92.firebasestorage.app',
@@ -63,7 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '971914231376',
     projectId: 'clarity-d3d92',
     storageBucket: 'clarity-d3d92.firebasestorage.app',
-    androidClientId: '971914231376-6s8h8iegm28r3lv284m01mvc8cbe8kuq.apps.googleusercontent.com',
+    androidClientId: '971914231376-17onq3c36l99bt9iithhghh82qigft7j.apps.googleusercontent.com',
     iosClientId: '971914231376-urosmrtul7htbimrbjh65sg8hic8nfcq.apps.googleusercontent.com',
     iosBundleId: 'com.example.clarity',
   );

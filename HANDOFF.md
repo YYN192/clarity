@@ -1,6 +1,6 @@
 # Clarity — Session Handoff
 
-**Last updated:** 2026-07-21 · **Commit:** `46f2265` · **Remote:** `github.com/YYN192/clarity` (in sync)
+**Last updated:** 2026-07-21 · **Commit:** (see git log — release-config session 2026-07-24) · **Remote:** `github.com/YYN192/clarity` (in sync)
 **Health:** `flutter analyze` → *No issues found*. App builds and runs on the Android emulator.
 
 Read this first, then `AGENTS.md` (graph tooling) and `CLAUDE_MEMORY.md` (deep architecture).
@@ -68,7 +68,7 @@ adding the secrets — the dispatcher had never completed a single run.
 | # | Task | Why it matters |
 |---|---|---|
 | ~~1.1~~ | ~~Night icons render as a sun~~ | ✅ done `67f4299`. It was **three** missing cases, not two — `Fog` fell through too. Verified on device (Auckland at night → crescent moon; hourly row shows moon-behind-cloud). Locked by tests. |
-| 1.2 | **Bundle id `com.example.clarity`** | Google Play **rejects** `com.example.*`. Blocks release. Changing it requires re-running `flutterfire configure` **and re-registering every FCM token** — existing `fcm_tokens` docs become dead. |
+| ~~1.2~~ | ~~Bundle id `com.example.clarity`~~ | ✅ Now **`dev.glocean.clarity`** (Play-permanent — never change). New Firebase android app `1:971914231376:android:979cc9949edb7127ce1b55` registered non-interactively via `flutterfire configure --yes`; **both SHA-1s** (debug + upload) added via `firebase apps:android:sha:create` — without those, Google Sign-In fails with DEVELOPER_ERROR. Old `com.example.clarity` tokens in `fcm_tokens` go dead; the dispatcher's prune path removes them on first failed send. |
 | 1.3 | **Barely any tests** | Was worse than "none": the repo shipped the untouched Flutter **counter template test**, so `flutter test` **failed**. Removed in `67f4299` and replaced with 10 passing tests for the icon mapping. Still untested: AppColors, _MainScreenState, MenuScreen, SettingsPage, WeatherPage, and `tools/weather-alerts` (risk 0.35). |
 | ~~1.4~~ | ~~`Snow` icon is `Colors.white` on a white card~~ — ✅ done `4558b04`. Contrast was exactly 1.0. Retinted; a contrast assertion now covers every condition. Original text:  | `ClayWeatherIcon` tints snow pure white; `ClayContainer` fills white and the chip is that same white at 10% alpha. The snowflake is very likely near-invisible. Not yet seen in situ — needs a snowy location to confirm. Pick a tinted blue-gray if so. |
 
@@ -199,6 +199,17 @@ HyperOS blocks three things the emulator allows. All three fail *loudly*, so rea
 - `adb devices` states: `unauthorized` = RSA prompt not accepted on the phone; `offline` =
   usually USB mode; missing entirely = USB mode is "Charging only" (set **File Transfer**).
 - Android Studio reads the same adb daemon — if `adb devices` sees it, Studio will too.
+
+### Release / Play Store
+- **Signing:** upload keystore at `android/upload-keystore.jks` + `android/key.properties`
+  (both gitignored — **back them up**; with Play App Signing the upload key is replaceable,
+  but only through Google support). Release builds fall back to debug signing when
+  `key.properties` is absent (CI, fresh clones) instead of failing.
+- **`flutterfire configure` runs non-interactively** with `--project --platforms
+  --android-package-name --yes`. Passing `--platforms=android` alone **removes** ios/web
+  from `firebase_options.dart` — always list all three.
+- Play Console still needs (no code): the AAB upload, data-safety form (location +
+  Firestore/auth data), a privacy-policy URL, store listing assets.
 
 ### Firestore rules
 - **The live rules are in `firestore.rules` and deploy with
