@@ -86,6 +86,7 @@ class WeatherModel extends Weather {
       double high = -double.infinity;
       double low = double.infinity;
       String icon = '';
+      var bestDistance = 999;
 
       for (var item in items) {
         final m = item['main'] ?? {};
@@ -93,8 +94,23 @@ class WeatherModel extends Weather {
         final l = (m['temp_min'] as num).toDouble();
         if (h > high) high = h;
         if (l < low) low = l;
-        // Take icon from midday if possible
-        icon = (item['weather'] as List? ?? []).firstOrNull?['icon'] ?? icon;
+
+        // Represent the day by the slot nearest midday. (The old code
+        // overwrote the icon on every slot, so each day rendered its ~21:00
+        // entry — a night icon on every daily row.)
+        final hour = DateTime.fromMillisecondsSinceEpoch((item['dt'] as int) * 1000).hour;
+        final distance = (hour - 12).abs();
+        final slotIcon = (item['weather'] as List? ?? []).firstOrNull?['icon'] as String?;
+        if (slotIcon != null && distance < bestDistance) {
+          bestDistance = distance;
+          icon = slotIcon;
+        }
+      }
+
+      // A trailing partial day may only have evening slots; a daily row should
+      // still show the day variant of its condition, never a moon.
+      if (icon.endsWith('n')) {
+        icon = '${icon.substring(0, icon.length - 1)}d';
       }
 
       return DailyForecast(

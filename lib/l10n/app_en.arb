@@ -287,5 +287,9 @@
   "no_results": "No cities found. Try a different spelling.",
   "@no_results": {
     "description": "Shown when city search returns nothing"
+  },
+  "sign_in_to_save": "Sign in to save cities.",
+  "@sign_in_to_save": {
+    "description": "Snackbar when a signed-out user taps the bookmark"
   }
 }

@@ -11,6 +11,8 @@ import '../../../weather/presentation/bloc/weather_event.dart';
 import '../../../weather/presentation/bloc/weather_state.dart';
 import '../../../settings/presentation/bloc/settings_bloc.dart';
 import '../../../settings/domain/entities/app_settings.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/bloc/auth_state.dart';
 import '../../../saved_cities/domain/entities/saved_city.dart';
 import '../../../saved_cities/presentation/bloc/saved_cities_bloc.dart';
 import '../../../saved_cities/presentation/bloc/saved_cities_event.dart';
@@ -174,6 +176,19 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                 context.read<SettingsBloc>().state.settings.language,
               ),
               onPressed: () {
+                // Saved cities live under the account's uid; without one the
+                // write dies in Firestore rules. Tell the user instead of
+                // failing silently.
+                if (context.read<AuthBloc>().state is! Authenticated) {
+                  final language =
+                      context.read<SettingsBloc>().state.settings.language;
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(SnackBar(
+                        content: Text(Localizer.localize(
+                            'sign_in_to_save', language))));
+                  return;
+                }
                 final bloc = context.read<SavedCitiesBloc>();
                 if (saved) {
                   bloc.add(SavedCityRemoved(SavedCity.idFor(city)));
