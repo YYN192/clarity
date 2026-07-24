@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification channel for severe-weather push alerts. Referenced by the
+         FCM default-channel meta-data in AndroidManifest and created in
+         MainActivity; the two must agree on the id. -->
+    <string name="severe_weather_channel_id">severe_weather_alerts</string>
+    <string name="severe_weather_channel_name">Severe weather alerts</string>
+    <string name="severe_weather_channel_description">Warnings about storms, extreme temperatures and other severe conditions near you.</string>
+</resources>
