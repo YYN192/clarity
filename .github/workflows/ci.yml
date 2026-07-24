@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # assets/.env is gitignored (holds the OpenWeather key) but declared in
+      # pubspec.yaml, so the bundler needs a file to exist. Tests never read it.
+      - name: Stub gitignored env asset
+        run: printf 'OPENWEATHER_API_KEY=ci-stub\n' > assets/.env
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      - run: flutter test
+
+  alert-dispatcher:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Test alert dispatcher
+        working-directory: tools/weather-alerts
+        run: node --test
