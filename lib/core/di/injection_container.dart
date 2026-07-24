@@ -12,6 +12,8 @@ import '../../features/weather/data/datasources/weather_remote_data_source.dart'
 import '../../features/weather/data/repositories/weather_repository_impl.dart';
 import '../../features/weather/domain/repositories/weather_repository.dart';
 import '../../features/weather/domain/usecases/get_weather.dart';
+import '../../features/weather/domain/usecases/search_cities.dart';
+import '../../features/weather/presentation/bloc/city_search_bloc.dart';
 import '../../features/weather/presentation/bloc/weather_bloc.dart';
 import '../../features/settings/presentation/bloc/settings_bloc.dart';
 import '../../features/auth/data/datasources/firebase_auth_data_source.dart';
@@ -64,6 +66,8 @@ Future<void> init(EnvConfig envConfig) async {
 
   // Use cases
   sl.registerLazySingleton(() => GetWeather(sl()));
+  sl.registerLazySingleton(() => SearchCities(sl()));
+  sl.registerFactory(() => CitySearchBloc(searchCities: sl()));
 
   // Repository
   sl.registerLazySingleton<WeatherRepository>(

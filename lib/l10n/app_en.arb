@@ -279,5 +279,13 @@
   "remove_city": "Remove city",
   "@remove_city": {
     "description": "Tooltip for removing a city from the saved list"
+  },
+  "search_failed": "Search is unavailable right now. Check your connection.",
+  "@search_failed": {
+    "description": "Shown when city search requests fail"
+  },
+  "no_results": "No cities found. Try a different spelling.",
+  "@no_results": {
+    "description": "Shown when city search returns nothing"
   }
 }

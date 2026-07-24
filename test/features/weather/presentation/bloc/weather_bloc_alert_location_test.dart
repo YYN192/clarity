@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:clarity/core/error/failures.dart';
 import 'package:clarity/core/services/location_service.dart';
 import 'package:clarity/core/services/notification_service.dart';
+import 'package:clarity/features/weather/domain/entities/city_location.dart';
 import 'package:clarity/features/weather/domain/entities/weather.dart';
 import 'package:clarity/features/weather/domain/repositories/weather_repository.dart';
 import 'package:clarity/features/weather/domain/usecases/get_weather.dart';
@@ -49,6 +50,11 @@ class _FakeWeatherRepository implements WeatherRepository {
   Future<Either<Failure, Weather>> getWeatherByCoords(double lat, double lon,
           {String units = 'metric', String locale = 'en'}) async =>
       Right(_weather('Device City', lat, lon));
+
+  @override
+  Future<Either<Failure, List<CityLocation>>> searchCities(String query,
+          {String locale = 'en'}) async =>
+      const Right([]);
 }
 
 class _FakeLocationService implements LocationService {
@@ -149,6 +155,25 @@ void main() {
         reason: 'Searching for a city redirected this device\'s severe-weather '
             'alerts to that city.',
       );
+      await bloc.close();
+    });
+
+    test('selecting a search suggestion never moves the alert location',
+        () async {
+      final bloc = await buildBloc();
+
+      bloc.add(const SelectCityEvent(
+          cityName: 'Tokyo', lat: _searchedLat, lon: _searchedLon));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        notifications.alertWrites,
+        isEmpty,
+        reason: 'Picking a city from search suggestions redirected this '
+            'device\'s severe-weather alerts to that city.',
+      );
+      expect(notifications.prefWrites, isNotEmpty,
+          reason: 'display prefs should still sync on selection');
       await bloc.close();
     });
 

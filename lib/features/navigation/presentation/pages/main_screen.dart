@@ -15,6 +15,9 @@ import '../../../saved_cities/domain/entities/saved_city.dart';
 import '../../../saved_cities/presentation/bloc/saved_cities_bloc.dart';
 import '../../../saved_cities/presentation/bloc/saved_cities_event.dart';
 import '../../../saved_cities/presentation/bloc/saved_cities_state.dart';
+import '../../../weather/presentation/bloc/city_search_bloc.dart';
+import '../../../weather/presentation/pages/city_search_page.dart';
+import '../../../../core/di/injection_container.dart';
 import 'menu_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -111,7 +114,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               _buildBookmarkAction(context),
               IconButton(
                 icon: const Icon(Icons.search, color: AppColors.textPrimary),
-                onPressed: () => _showSearchDialog(context),
+                onPressed: () => _openSearch(context),
               ),
             ],
           ),
@@ -339,48 +342,23 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     );
   }
 
-  void _showSearchDialog(BuildContext context) {
-    final controller = TextEditingController();
+  void _openSearch(BuildContext context) {
+    // Capture from this context — a pushed route's context sits above the
+    // router-level providers (see HANDOFF §3, Provider scope).
+    final settingsBloc = context.read<SettingsBloc>();
     final weatherBloc = context.read<WeatherBloc>();
-    final settings = context.read<SettingsBloc>().state.settings;
-    final language = settings.language;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(Localizer.localize('search_city', language),
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            hintText: Localizer.localize('enter_city', language),
-            hintStyle: const TextStyle(color: AppColors.textSecondary),
-            enabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.textSecondary)),
-            focusedBorder:
-                const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.functionalBlue)),
-          ),
+    final savedCitiesBloc = context.read<SavedCitiesBloc>();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: settingsBloc),
+            BlocProvider.value(value: weatherBloc),
+            BlocProvider.value(value: savedCitiesBloc),
+            BlocProvider(create: (_) => sl<CitySearchBloc>()),
+          ],
+          child: const CitySearchPage(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(Localizer.localize('cancel', language), style: const TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                final locale = Localizer.getLocaleCode(language);
-                weatherBloc.add(GetWeatherEvent(controller.text, locale: locale));
-              }
-              Navigator.pop(dialogContext);
-            },
-            child: Text(Localizer.localize('search', language),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.functionalBlue)),
-          ),
-        ],
       ),
     );
   }

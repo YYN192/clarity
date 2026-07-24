@@ -26,6 +26,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   }) : super(WeatherInitial()) {
     on<LoadInitialWeather>(_onLoadInitialWeather);
     on<GetWeatherEvent>(_onGetWeather);
+    on<SelectCityEvent>(_onSelectCity);
     on<RefreshAlertLocation>(_onRefreshAlertLocation);
   }
 
@@ -107,6 +108,24 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     // Save selection to priority
     await sharedPreferences.setString(_lastCityKey, event.cityName);
     await _fetchWeatherByCity(event.cityName, event.units, event.locale, emit);
+  }
+
+  /// Search selection: fetch by the picked suggestion's exact coordinates.
+  /// Still a browsing action, not a device position — `fromGps` stays false so
+  /// the alert location is untouched.
+  Future<void> _onSelectCity(SelectCityEvent event, Emitter<WeatherState> emit) async {
+    emit(WeatherLoading());
+    await sharedPreferences.setString(_lastCityKey, event.cityName);
+    final result = await getWeather(WeatherParams(
+      lat: event.lat,
+      lon: event.lon,
+      units: event.units,
+      locale: event.locale,
+    ));
+    result.fold(
+      (failure) => emit(WeatherError(failure.message)),
+      (weather) => _emitLoaded(weather, event.units, event.locale, emit, fromGps: false),
+    );
   }
 
   Future<void> _fetchWeatherByCity(String cityName, String units, String locale, Emitter<WeatherState> emit) async {

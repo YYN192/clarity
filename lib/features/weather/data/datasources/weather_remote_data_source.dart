@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../models/city_location_model.dart';
 import '../models/weather_model.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/config/env_config.dart';
@@ -6,6 +7,7 @@ import '../../../../core/config/env_config.dart';
 abstract class WeatherRemoteDataSource {
   Future<WeatherModel> getWeatherByCity(String cityName, {String units = 'metric', String locale = 'en'});
   Future<WeatherModel> getWeatherByCoords(double lat, double lon, {String units = 'metric', String locale = 'en'});
+  Future<List<CityLocationModel>> searchCities(String query, {String locale = 'en'});
 }
 
 class WeatherRemoteDataSourceImpl implements WeatherRemoteDataSource {
@@ -102,6 +104,40 @@ class WeatherRemoteDataSourceImpl implements WeatherRemoteDataSource {
       }
       throw NetworkException();
     } catch (e) {
+      throw ServerException();
+    }
+  }
+
+  @override
+  Future<List<CityLocationModel>> searchCities(String query, {String locale = 'en'}) async {
+    try {
+      final response = await dio.get(
+        'https://api.openweathermap.org/geo/1.0/direct',
+        queryParameters: {
+          'q': query,
+          'limit': 5, // API maximum
+          'appid': envConfig.openWeatherApiKey,
+        },
+      );
+
+      if (response.statusCode != 200) {
+        _handleError(response.statusCode);
+      }
+
+      final List data = response.data;
+      return data
+          .map((e) =>
+              CityLocationModel.fromJson(e as Map<String, dynamic>, locale: locale))
+          .toList();
+    } on DioException catch (e) {
+      if (e.response != null) {
+        _handleError(e.response!.statusCode);
+      }
+      throw NetworkException();
+    } catch (e) {
+      if (e is ApiKeyException || e is RateLimitException || e is NotFoundException) {
+        rethrow;
+      }
       throw ServerException();
     }
   }
