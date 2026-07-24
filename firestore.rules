@@ -4,18 +4,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Push-notification device tokens.
-    // A client may register/update/remove its own token document.
-    // Reads are denied — only the Admin SDK (backend / Cloud Functions) reads these.
+    // Push-notification device tokens, keyed by the FCM token itself.
+    // Reads are denied outright — only the alert dispatcher reads these, and it
+    // uses the Admin SDK, which bypasses rules entirely.
     //
-    // Kept exactly as published in the console. Note it deliberately does NOT
-    // require request.auth: NotificationService stores a token before sign-in
-    // (uid is nullable in _storeToken), so adding an auth check here would stop
-    // signed-out devices registering for alerts.
+    // Ownership is enforced by uid. This replaced a rule that allowed
+    // unauthenticated create/update and `delete: if true`, under which anyone
+    // holding a device's token could silently unregister it from severe-weather
+    // alerts or repoint it at another location. The app now signs in
+    // anonymously at startup (see _ensureSignedIn in main.dart), so a uid is
+    // always available — without that, this rule would lock every device out.
     match /fcm_tokens/{token} {
-      allow create, update: if request.resource.data.token == token;
-      allow delete: if true;
       allow read: if false;
+
+      allow create: if request.auth != null
+                    && request.resource.data.token == token
+                    && request.resource.data.uid == request.auth.uid;
+
+      // Every update must leave the document owned by the caller, so it can
+      // never be reassigned to someone else.
+      //
+      // The `uid == null` arm is a migration allowance: documents written
+      // before this rule carry a null uid (tokens could be registered while
+      // signed out), and without it a device could not adopt its own existing
+      // token document — it would simply stop updating its location. Claiming
+      // an unowned document still requires already knowing the token. Remove
+      // this arm once no null-uid documents remain.
+      allow update: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && (!('uid' in resource.data)
+                        || resource.data.uid == null
+                        || resource.data.uid == request.auth.uid);
+
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
     }
 
     // Bookmarked cities, scoped under the owning uid so no query needs an

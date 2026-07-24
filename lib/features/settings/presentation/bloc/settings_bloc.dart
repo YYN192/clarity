@@ -11,6 +11,10 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final SharedPreferences sharedPreferences;
   final NotificationService notificationService;
 
+  /// True until the settings loaded from disk have been applied once, so the
+  /// startup re-registration below runs exactly once per launch.
+  bool _isInitialLoad = true;
+
   SettingsBloc({
     required this.sharedPreferences,
     required this.notificationService,
@@ -49,7 +53,15 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       } else {
         await notificationService.disable();
       }
+    } else if (s.severeWeatherAlerts && _isInitialLoad) {
+      // Startup with alerts already on: re-register so the token document
+      // carries the current uid (the Firestore rules require ownership) and a
+      // fresh timestamp for the dispatcher's staleness filter. Permission is
+      // already granted here, so this shows no dialog.
+      final granted = await notificationService.enable();
+      if (!granted) s = s.copyWith(severeWeatherAlerts: false);
     }
+    _isInitialLoad = false;
 
     await sharedPreferences.setString('setting_language', s.language);
     await sharedPreferences.setInt('setting_temp_unit', s.temperatureUnit.index);
