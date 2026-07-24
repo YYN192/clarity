@@ -3,11 +3,15 @@
  *
  * Runs on a schedule (GitHub Actions). For every device registered in the
  * `fcm_tokens` Firestore collection with alerts enabled and a known location:
- *   1. group devices by a coarse lat/lon grid (so a city = one API call)
- *   2. fetch current conditions from OpenWeather (free /data/2.5/weather)
- *   3. classify severity from the condition id + wind/temperature thresholds
- *   4. skip anything already sent recently (dedupe)
- *   5. push via Firebase Admin, and prune tokens the device has unregistered
+ *   1. drop devices whose position is too stale to trust
+ *   2. group devices by a coarse lat/lon grid (so a city = one API call)
+ *   3. fetch current conditions from OpenWeather (free /data/2.5/weather)
+ *   4. classify severity from the condition id + wind/temperature thresholds
+ *   5. skip anything already sent recently (dedupe)
+ *   6. push via Firebase Admin, and prune tokens the device has unregistered
+ *
+ * The decision logic lives in `alert-rules.mjs` so it can be unit-tested; this
+ * file is the IO shell (secrets, Firestore, HTTP, FCM).
  *
  * Secrets (env): OPENWEATHER_API_KEY, FIREBASE_SERVICE_ACCOUNT (service-account JSON).
  */
@@ -17,6 +21,15 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+
+import {
+  STALE_LOCATION_MS,
+  alertFor,
+  buildBody,
+  groupByGrid,
+  selectAlertableDevices,
+  shouldSend,
+} from './alert-rules.mjs';
 
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY;
 const FIREBASE_SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -34,63 +47,16 @@ const db = getFirestore();
 const messaging = getMessaging();
 
 const COLLECTION = 'fcm_tokens';
-/** Don't repeat the same kind of alert to a device within this window. */
-const COOLDOWN_MS = 6 * 60 * 60 * 1000;
-/** Decimal places used to group nearby devices (1 ≈ 11 km). */
-const GRID_PRECISION = 1;
 
 /** Log what would be sent, send nothing, write nothing. */
 const DRY_RUN = process.env.DRY_RUN === '1';
 /** Ignore real conditions + cooldown and push a test alert. Proves delivery
  *  end-to-end when the weather is calm. */
 const FORCE_ALERT = process.env.FORCE_ALERT === '1';
-
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-
-/**
- * Map OpenWeather current-weather JSON (metric units) to an alert, or null when
- * conditions are unremarkable. Condition ids: openweathermap.org/weather-conditions
- */
-function classify(w) {
-  const condition = w.weather?.[0] ?? {};
-  const id = condition.id ?? 0;
-  const desc = condition.description ?? 'severe weather';
-  const temp = w.main?.temp ?? 0; // °C
-  const wind = Math.max(w.wind?.speed ?? 0, w.wind?.gust ?? 0); // m/s
-
-  if (id === 781 || id === 900) {
-    return { key: 'tornado', title: 'Tornado warning', detail: 'Tornado reported near {city}. Seek shelter immediately.' };
-  }
-  if (id === 901 || id === 902) {
-    return { key: 'tropical-storm', title: 'Tropical storm warning', detail: 'Severe tropical conditions expected in {city}.' };
-  }
-  if (id >= 200 && id <= 232) {
-    return { key: 'thunderstorm', title: 'Thunderstorm warning', detail: `${cap(desc)} expected in {city}.` };
-  }
-  if ([502, 503, 504, 522, 531].includes(id)) {
-    return { key: 'heavy-rain', title: 'Heavy rain warning', detail: `${cap(desc)} in {city} — flooding possible.` };
-  }
-  if (id === 511 || (id >= 611 && id <= 616)) {
-    return { key: 'freezing', title: 'Freezing precipitation', detail: `${cap(desc)} in {city} — icy conditions likely.` };
-  }
-  if (id === 602 || id === 622) {
-    return { key: 'heavy-snow', title: 'Heavy snow warning', detail: `${cap(desc)} expected in {city}.` };
-  }
-  if ([751, 761, 762, 771].includes(id)) {
-    return { key: 'atmospheric', title: 'Hazardous conditions', detail: `${cap(desc)} reported in {city}.` };
-  }
-  if (wind >= 17.2) {
-    // 17.2 m/s ≈ Beaufort 8 (gale)
-    return { key: 'high-wind', title: 'High wind warning', detail: `Winds around ${Math.round(wind * 3.6)} km/h in {city}.` };
-  }
-  if (temp >= 40) {
-    return { key: 'extreme-heat', title: 'Extreme heat warning', detail: 'Dangerously high temperatures in {city} ({temp}).' };
-  }
-  if (temp <= -20) {
-    return { key: 'extreme-cold', title: 'Extreme cold warning', detail: 'Dangerously low temperatures in {city} ({temp}).' };
-  }
-  return null;
-}
+/** Override the staleness cutoff (days) without editing code. */
+const STALE_AFTER_MS = process.env.STALE_AFTER_DAYS
+  ? Number(process.env.STALE_AFTER_DAYS) * 24 * 60 * 60 * 1000
+  : STALE_LOCATION_MS;
 
 async function fetchWeather(lat, lon) {
   const url =
@@ -99,24 +65,6 @@ async function fetchWeather(lat, lon) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`OpenWeather responded ${res.status}`);
   return res.json();
-}
-
-/** True when this device hasn't already had this alert recently. */
-function shouldSend(device, alert) {
-  if (FORCE_ALERT) return true; // test mode bypasses the cooldown
-  if (device.lastAlertKey !== alert.key) return true;
-  const lastMs = device.lastAlertAt?.toMillis?.() ?? 0;
-  return Date.now() - lastMs > COOLDOWN_MS;
-}
-
-function buildBody(alert, device, weather) {
-  const city = device.city || weather.name || 'your area';
-  const celsius = weather.main?.temp ?? 0;
-  const temp =
-    device.units === 'imperial'
-      ? `${Math.round((celsius * 9) / 5 + 32)}°F`
-      : `${Math.round(celsius)}°C`;
-  return alert.detail.replace('{city}', city).replace('{temp}', temp);
 }
 
 async function sendTo(device, alert, weather) {
@@ -155,23 +103,22 @@ async function main() {
     .where('severeWeatherAlerts', '==', true)
     .get();
 
-  const devices = snapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .filter((d) => typeof d.lat === 'number' && typeof d.lon === 'number' && d.token);
+  const registered = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const { devices, staleCount } = selectAlertableDevices(registered, {
+    maxAgeMs: STALE_AFTER_MS,
+  });
+
+  if (staleCount > 0) {
+    const days = Math.round(STALE_AFTER_MS / (24 * 60 * 60 * 1000));
+    console.log(`Skipping ${staleCount} device(s) with a position older than ${days}d.`);
+  }
 
   if (devices.length === 0) {
-    console.log('No registered devices with a known location — nothing to do.');
+    console.log('No registered devices with a fresh known location — nothing to do.');
     return;
   }
 
-  // Group by coarse grid cell so nearby devices share a single API call.
-  const groups = new Map();
-  for (const device of devices) {
-    const cell = `${device.lat.toFixed(GRID_PRECISION)},${device.lon.toFixed(GRID_PRECISION)}`;
-    if (!groups.has(cell)) groups.set(cell, []);
-    groups.get(cell).push(device);
-  }
-
+  const groups = groupByGrid(devices);
   console.log(`${devices.length} device(s) across ${groups.size} location(s).`);
 
   let sent = 0;
@@ -187,18 +134,7 @@ async function main() {
       continue;
     }
 
-    // classify() returns null for unremarkable conditions, so in force mode
-    // substitute a synthetic alert rather than skipping the cell — otherwise
-    // the test can only fire when the weather is already severe.
-    const alert =
-      classify(weather) ??
-      (FORCE_ALERT
-        ? {
-            key: 'test',
-            title: 'Test alert',
-            detail: 'Test alert for {city} — currently {temp}. Delivery is working.',
-          }
-        : null);
+    const alert = alertFor(weather, { forceAlert: FORCE_ALERT });
     if (!alert) {
       console.log(`${cell} (${weather.name}): clear`);
       continue;
@@ -206,7 +142,7 @@ async function main() {
 
     console.log(`${cell} (${weather.name}): ${alert.key} → ${group.length} device(s)`);
     for (const device of group) {
-      if (!shouldSend(device, alert)) {
+      if (!shouldSend(device, alert, { forceAlert: FORCE_ALERT })) {
         skipped++;
         continue;
       }
