@@ -1,6 +1,6 @@
 # Clarity — Session Handoff
 
-**Last updated:** 2026-07-21 · **Commit:** `67f4299` · **Remote:** `github.com/YYN192/clarity` (in sync)
+**Last updated:** 2026-07-21 · **Commit:** `46f2265` · **Remote:** `github.com/YYN192/clarity` (in sync)
 **Health:** `flutter analyze` → *No issues found*. App builds and runs on the Android emulator.
 
 Read this first, then `AGENTS.md` (graph tooling) and `CLAUDE_MEMORY.md` (deep architecture).
@@ -70,22 +70,22 @@ adding the secrets — the dispatcher had never completed a single run.
 | ~~1.1~~ | ~~Night icons render as a sun~~ | ✅ done `67f4299`. It was **three** missing cases, not two — `Fog` fell through too. Verified on device (Auckland at night → crescent moon; hourly row shows moon-behind-cloud). Locked by tests. |
 | 1.2 | **Bundle id `com.example.clarity`** | Google Play **rejects** `com.example.*`. Blocks release. Changing it requires re-running `flutterfire configure` **and re-registering every FCM token** — existing `fcm_tokens` docs become dead. |
 | 1.3 | **Barely any tests** | Was worse than "none": the repo shipped the untouched Flutter **counter template test**, so `flutter test` **failed**. Removed in `67f4299` and replaced with 10 passing tests for the icon mapping. Still untested: AppColors, _MainScreenState, MenuScreen, SettingsPage, WeatherPage, and `tools/weather-alerts` (risk 0.35). |
-| 1.4 | **`Snow` icon is `Colors.white` on a white card** | `ClayWeatherIcon` tints snow pure white; `ClayContainer` fills white and the chip is that same white at 10% alpha. The snowflake is very likely near-invisible. Not yet seen in situ — needs a snowy location to confirm. Pick a tinted blue-gray if so. |
+| ~~1.4~~ | ~~`Snow` icon is `Colors.white` on a white card~~ — ✅ done `4558b04`. Contrast was exactly 1.0. Retinted; a contrast assertion now covers every condition. Original text:  | `ClayWeatherIcon` tints snow pure white; `ClayContainer` fills white and the chip is that same white at 10% alpha. The snowflake is very likely near-invisible. Not yet seen in situ — needs a snowy location to confirm. Pick a tinted blue-gray if so. |
 
 ### 🟡 P2 — Cleanup / consistency
 | # | Task |
 |---|---|
 | ~~2.1~~ | ~~Remove unused deps `http`, `translator`, `lottie`~~ — ✅ done `5717f71` (zero imports repo-wide; `dio` is the real client). **Do not remove `flutter_inset_shadow`** — it *is* used by `clay_weather_icon`'s sibling `clay_container.dart`. |
-| 2.2 | Settings toggle still uses bright `functionalBlue` — user rejected that blue on profile. Switch to `cloudShadow` slate. |
+| ~~2.2~~ | ~~Settings toggle uses `functionalBlue`~~ — ✅ done `4558b04`, now `cloudShadow`. |
 | ~~2.3~~ | ~~Delete stale `MEMORY_INDEX.md`~~ — ✅ done `5717f71` (content was fully covered by `CLAUDE_MEMORY.md`). |
 
 ### 🟢 P3 — Enhancements
 | # | Task |
 |---|---|
-| 3.1 | Tablet/desktop master-detail (`main_screen.dart` uses `PageView` at all widths; see `clarity-responsive`). |
+| ~~3.1~~ | ~~Tablet/desktop master-detail~~ — ✅ done `3a2d960`. Phone keeps the pager; ≥600dp shows both panes in a Row (2:3). Needs separate scroll controllers — one cannot drive two attached positions. |
 | 3.2 | Guest → real account linking (anonymous upgrade flow). |
 | 3.3 | Real Google logo asset on the login button (currently `Icons.g_mobiledata_rounded`). |
-| 3.4 | Saved-locations feature (the Stitch mockup showed it; app only stores one `last_selected_city`). |
+| ~~3.4~~ | ~~Saved-locations feature~~ — ✅ done `95bcddc`/`46f2265`. Firestore-synced at `users/{uid}/saved_cities/{cityId}`; bookmark toggle in the app bar, list in the menu. Rules deployed. |
 
 ### ⚪ P4 — Won't do / blocked indefinitely
 - **iOS push** — needs a paid Apple Developer account. User doesn't have one. Don't propose APNs work.
@@ -199,6 +199,25 @@ HyperOS blocks three things the emulator allows. All three fail *loudly*, so rea
 - `adb devices` states: `unauthorized` = RSA prompt not accepted on the phone; `offline` =
   usually USB mode; missing entirely = USB mode is "Charging only" (set **File Transfer**).
 - Android Studio reads the same adb daemon — if `adb devices` sees it, Studio will too.
+
+### Firestore rules
+- **The live rules are in `firestore.rules` and deploy with
+  `firebase deploy --only firestore:rules`** (CLI is logged in as isvor2896@gmail.com).
+  Deploying **replaces every rule**, so never write that file from guesswork — an earlier
+  reconstruction of the `fcm_tokens` block wrongly required `request.auth != null`, which
+  would have stopped signed-out devices registering for alerts (`_storeToken` runs with a
+  nullable uid).
+- ⚠️ **Known weakness, not yet addressed:** `fcm_tokens` allows `create/update` with no auth
+  check and `delete: if true`. Anyone who learns a token can redirect or delete that device's
+  alert registration. Tightening it is awkward because unauthenticated devices must still be
+  able to register — needs thought rather than a quick patch.
+
+### Provider scope
+- **A pushed route's context sits ABOVE the router-level providers.** `WeatherBloc` and
+  `SavedCitiesBloc` are provided in `app_router.dart`, so reading them inside a
+  `pageBuilder` throws `ProviderNotFoundError`. Capture the bloc from the calling context
+  *before* `Navigator.push`. `SettingsBloc`/`AuthBloc` hide this — they are app-wide in
+  `main.dart`.
 
 ### Android / emulator
 - `adb`, `emulator`, `flutter` are **not on the user's fish PATH**. Use full paths:
