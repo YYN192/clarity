@@ -38,6 +38,21 @@ class AuthSignOutRequested extends AuthEvent {
   const AuthSignOutRequested();
 }
 
+/// Upgrade the current guest account in place with a Google credential.
+class AuthLinkWithGoogleRequested extends AuthEvent {
+  const AuthLinkWithGoogleRequested();
+}
+
+/// Upgrade the current guest account in place with email + password.
+class AuthLinkWithEmailRequested extends AuthEvent {
+  final String email;
+  final String password;
+  const AuthLinkWithEmailRequested(this.email, this.password);
+
+  @override
+  List<Object?> get props => [email, password];
+}
+
 class AuthDisplayNameUpdateRequested extends AuthEvent {
   final String name;
   const AuthDisplayNameUpdateRequested(this.name);

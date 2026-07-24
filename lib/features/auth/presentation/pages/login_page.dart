@@ -214,7 +214,7 @@ class _ClayButton extends StatelessWidget {
       onTap: onTap,
       child: ClayContainer(
         borderRadius: 16,
-        color: filled ? AppColors.functionalBlue : AppColors.getCardColor(),
+        color: filled ? AppColors.cloudShadow : AppColors.getCardColor(),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         child: loading
             ? const Center(

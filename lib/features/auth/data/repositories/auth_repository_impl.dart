@@ -44,6 +44,17 @@ class AuthRepositoryImpl implements AuthRepository {
       _guard(() => dataSource.updateDisplayName(name));
 
   @override
+  Future<Either<Failure, AuthUser>> linkWithGoogle() =>
+      _guard(dataSource.linkWithGoogle);
+
+  @override
+  Future<Either<Failure, AuthUser>> linkWithEmail({
+    required String email,
+    required String password,
+  }) =>
+      _guard(() => dataSource.linkWithEmail(email, password));
+
+  @override
   Future<Either<Failure, Unit>> signOut() async {
     try {
       await dataSource.signOut();
@@ -80,6 +91,11 @@ class AuthRepositoryImpl implements AuthRepository {
         return 'Incorrect email or password.';
       case 'email-already-in-use':
         return 'An account already exists for that email.';
+      case 'credential-already-in-use':
+        return 'That account is already in use. Sign in with it instead — '
+            'your guest data cannot be merged into it.';
+      case 'provider-already-linked':
+        return 'This account is already linked to that sign-in method.';
       case 'weak-password':
         return 'Please choose a stronger password (6+ characters).';
       case 'operation-not-allowed':

@@ -291,5 +291,25 @@
   "sign_in_to_save": "Sign in to save cities.",
   "@sign_in_to_save": {
     "description": "Snackbar when a signed-out user taps the bookmark"
+  },
+  "upgrade_account_title": "Keep your data",
+  "@upgrade_account_title": {
+    "description": "Guest upgrade card title on the profile"
+  },
+  "upgrade_account_body": "You are browsing as a guest. Link an account and your saved cities and alert settings stay with you on every device.",
+  "@upgrade_account_body": {
+    "description": "Guest upgrade card body"
+  },
+  "link_google": "Continue with Google",
+  "@link_google": {
+    "description": "Button linking the guest account to Google"
+  },
+  "link_email": "Link with email",
+  "@link_email": {
+    "description": "Button linking the guest account to email+password"
+  },
+  "link_account": "Link",
+  "@link_account": {
+    "description": "Confirm button of the link-email dialog"
   }
 }

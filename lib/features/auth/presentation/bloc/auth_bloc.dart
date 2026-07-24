@@ -22,6 +22,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignInAnonymouslyRequested>(_onSignInAnonymous);
     on<AuthSignOutRequested>(_onSignOut);
     on<AuthDisplayNameUpdateRequested>(_onUpdateDisplayName);
+    on<AuthLinkWithGoogleRequested>(_onLinkGoogle);
+    on<AuthLinkWithEmailRequested>(_onLinkEmail);
 
     _userSubscription =
         _repository.authStateChanges.listen((user) => add(AuthUserChanged(user)));
@@ -71,6 +73,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (failure) {
         emit(AuthError(failure.message));
         // Stay signed in on failure — don't drop the session to Unauthenticated.
+        final current = _repository.currentUser;
+        emit(current != null ? Authenticated(current) : const Unauthenticated());
+      },
+      (user) => emit(Authenticated(user)),
+    );
+  }
+
+  Future<void> _onLinkGoogle(
+          AuthLinkWithGoogleRequested event, Emitter<AuthState> emit) =>
+      _runKeepingSession(emit, _repository.linkWithGoogle);
+
+  Future<void> _onLinkEmail(
+          AuthLinkWithEmailRequested event, Emitter<AuthState> emit) =>
+      _runKeepingSession(
+          emit,
+          () => _repository.linkWithEmail(
+              email: event.email, password: event.password));
+
+  /// Like [_run], but a failure keeps the current session instead of dropping
+  /// to Unauthenticated — a failed upgrade must never sign the guest out.
+  Future<void> _runKeepingSession(
+      Emitter<AuthState> emit, Future<Either<Failure, AuthUser>> Function() action) async {
+    emit(const AuthLoading());
+    final result = await action();
+    result.fold(
+      (failure) {
+        emit(AuthError(failure.message));
         final current = _repository.currentUser;
         emit(current != null ? Authenticated(current) : const Unauthenticated());
       },

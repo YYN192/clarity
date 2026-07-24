@@ -61,6 +61,10 @@ class ProfilePage extends StatelessWidget {
                       children: [
                         _header(lang),
                         const SizedBox(height: 32),
+                        if (user.isAnonymous) ...[
+                          _upgradeCard(context, lang),
+                          const SizedBox(height: 32),
+                        ],
                         _statsGrid(settings, localeCode, lang),
                         const SizedBox(height: 36),
                         _sectionHeader(Localizer.localize('account_details', lang)),
@@ -320,6 +324,120 @@ class ProfilePage extends StatelessWidget {
           value: context.read<SettingsBloc>(),
           child: const SettingsPage(),
         ),
+      ),
+    );
+  }
+
+  // ---- Guest upgrade ------------------------------------------------------
+
+  /// Shown to anonymous users only: linking attaches a real credential to the
+  /// SAME uid, so saved cities and alert registration survive the upgrade.
+  Widget _upgradeCard(BuildContext context, String lang) {
+    final loading = context.watch<AuthBloc>().state is AuthLoading;
+    return ClayContainer(
+      borderRadius: 20,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.upgrade_rounded, color: _slate, size: 22),
+              const SizedBox(width: 8),
+              Text(Localizer.localize('upgrade_account_title', lang),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: AppColors.textPrimary)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(Localizer.localize('upgrade_account_body', lang),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 16),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: loading
+                ? null
+                : () => context.read<AuthBloc>().add(const AuthLinkWithGoogleRequested()),
+            child: ClayContainer(
+              borderRadius: 16,
+              color: _slate,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: Text(Localizer.localize('link_google', lang),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: loading ? null : () => _showLinkEmailDialog(context, lang),
+            child: ClayContainer(
+              borderRadius: 16,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: Text(Localizer.localize('link_email', lang),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLinkEmailDialog(BuildContext context, String lang) {
+    final authBloc = context.read<AuthBloc>();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: Text(Localizer.localize('link_email', lang),
+            style: const TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration:
+                  InputDecoration(hintText: Localizer.localize('email', lang)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                  hintText: Localizer.localize('password', lang)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(Localizer.localize('cancel', lang),
+                style: const TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              final email = emailController.text.trim();
+              final password = passwordController.text;
+              if (email.isEmpty || password.isEmpty) return;
+              authBloc.add(AuthLinkWithEmailRequested(email, password));
+              Navigator.pop(dialogContext);
+            },
+            child: Text(Localizer.localize('link_account', lang),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: _slate)),
+          ),
+        ],
       ),
     );
   }

@@ -16,6 +16,14 @@ abstract class FirebaseAuthDataSource {
   Future<AuthUser> signInWithGoogle();
   Future<AuthUser> signInAnonymously();
   Future<AuthUser> updateDisplayName(String name);
+
+  /// Upgrade the current (anonymous) user in place by attaching a Google
+  /// credential. Preserves the uid, so Firestore data keyed by it survives.
+  Future<AuthUser> linkWithGoogle();
+
+  /// Upgrade the current (anonymous) user in place with email+password.
+  Future<AuthUser> linkWithEmail(String email, String password);
+
   Future<void> signOut();
 }
 
@@ -93,6 +101,44 @@ class FirebaseAuthDataSourceImpl implements FirebaseAuthDataSource {
     await user.updateDisplayName(name.trim());
     await user.reload();
     return AuthUserModel.fromFirebase(firebaseAuth.currentUser!);
+  }
+
+  @override
+  Future<AuthUser> linkWithGoogle() async {
+    final user = _requireCurrentUser();
+
+    // Web: same popup-based flow as sign-in — authenticate() is unsupported.
+    if (kIsWeb) {
+      final cred = await user.linkWithPopup(GoogleAuthProvider());
+      return AuthUserModel.fromFirebase(cred.user!);
+    }
+
+    await _ensureGoogleInitialized();
+    final account = await googleSignIn.authenticate();
+    final idToken = account.authentication.idToken;
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+    final cred = await user.linkWithCredential(credential);
+    return AuthUserModel.fromFirebase(cred.user!);
+  }
+
+  @override
+  Future<AuthUser> linkWithEmail(String email, String password) async {
+    final user = _requireCurrentUser();
+    final credential = EmailAuthProvider.credential(
+      email: email.trim(),
+      password: password,
+    );
+    final cred = await user.linkWithCredential(credential);
+    return AuthUserModel.fromFirebase(cred.user!);
+  }
+
+  User _requireCurrentUser() {
+    final user = firebaseAuth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+          code: 'no-current-user', message: 'Not signed in.');
+    }
+    return user;
   }
 
   @override
